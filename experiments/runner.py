@@ -25,7 +25,13 @@ from dartmouth.config import CHAIRS, Config, apply_chair_override
 from dartmouth.leakscan import PATTERNS
 from dartmouth.storage.archive import classify_error
 
-from .validate_output import validate_output
+try:
+    from .validate_output import validate_output
+except ImportError:  # `python experiments/runner.py` で直接動かしたとき
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from experiments.validate_output import validate_output
 
 WARNING_TOKENS = 360_000
 ABORT_TOKENS = 480_000

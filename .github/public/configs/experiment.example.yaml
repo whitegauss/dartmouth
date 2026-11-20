@@ -1,0 +1,43 @@
+# 比較実験の設定の見本（公開リポジトリにだけ置く）。cp configs/experiment.example.yaml configs/experiment.yaml して使う。
+# configs/experiment.yaml は .gitignore 済み。実モデルID・実際の議題・禁止語の正式リストはそちらにだけ書く。
+# 2×2 配置: {高エフォート2名, 低エフォート4名} × {経路1（agy）, 経路2（Claude Code）} = 条件 A〜D。議題3つ × 4条件 = 12セッション。
+#   python experiments/runner.py --config configs/experiment.yaml --pilot --dry-run   # まず模擬で流す
+#   python experiments/runner.py --config configs/experiment.yaml --pilot --live      # サブスク枠で実行（API キーは使わない）
+# model: は自分の経路で使えるモデルIDに置き換える（下は抽象表記: tier-H = 重い席、tier-L = 軽い席）。
+topics:
+  "1": {prompt: "（議題1の本文）"}
+  "2": {prompt: "（議題2の本文）", restricted: true}     # restricted: 他社の経路へ切り替えない
+  "3": {prompt: "（議題3の本文）", share_scope: public}  # 公開してよい議題だけ public を明示（既定は private）
+pilot_topic: "1"
+pilot_conditions: [A, C]
+forbidden_words: ["（禁止語）"]
+conditions:
+  A:                                   # 経路1・高エフォート2名
+    roles_standard: neon               # 議長（標準）。neon / argon / opus
+    roles_reversed: argon              # 議長（逆順）
+    seats:
+      - {id: manager, persona: manager, adapter: antigravity_cli, model: route1-tier-H, effort: high,
+         fallback: {adapter: antigravity_cli, model: route1-tier-H-alt, effort: high}}
+      - {id: engineer, persona: engineer, adapter: antigravity_cli, model: route1-tier-H, effort: high}
+  B:                                   # 経路1・低エフォート4名
+    roles_standard: neon
+    roles_reversed: argon
+    seats:
+      - {id: manager, persona: manager, adapter: antigravity_cli, model: route1-tier-L, effort: low}
+      - {id: engineer, persona: engineer, adapter: antigravity_cli, model: route1-tier-L, effort: low}
+      - {id: critic, persona: critic, adapter: antigravity_cli, model: route1-tier-L, effort: low}
+      - {id: quota, persona: quota, adapter: antigravity_cli, model: route1-tier-L, effort: low}
+  C:                                   # 経路2・高エフォート2名
+    roles_standard: opus
+    roles_reversed: neon
+    seats:
+      - {id: manager, persona: manager, adapter: claude_code, model: route2-tier-H, effort: high}
+      - {id: engineer, persona: engineer, adapter: claude_code, model: route2-tier-H, effort: high}
+  D:                                   # 経路2・低エフォート4名
+    roles_standard: opus
+    roles_reversed: neon
+    seats:
+      - {id: manager, persona: manager, adapter: claude_code, model: route2-tier-L, effort: low}
+      - {id: engineer, persona: engineer, adapter: claude_code, model: route2-tier-L, effort: low}
+      - {id: critic, persona: critic, adapter: claude_code, model: route2-tier-L, effort: low}
+      - {id: quota, persona: quota, adapter: claude_code, model: route2-tier-L, effort: low}
