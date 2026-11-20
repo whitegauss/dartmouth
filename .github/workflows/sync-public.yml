@@ -1,6 +1,7 @@
 # 非公開の正本から公開ミラーへの一方通行の同期（2026-11-20 の会議 D-001・D-002・D-005）
 # - release-v* のタグを打ったときだけ動く
-# - leakscan の strict 検査（固有語リスト必須）が通らなければ、何も push せずに失敗する（Fail-Closed）
+# - leakscan の strict 検査（固有語リスト必須）と、公開用ツリーへの固定監査（docs/release-checklist.md）が
+#   通らなければ、何も push せずに失敗する（Fail-Closed）
 # - 公開ミラーには、そのタグの中身を1コミットとして、プロジェクト共通の名義で積む（正本の履歴と author は出さない）
 #
 # 必要な設定（リポジトリの Settings → Secrets and variables → Actions）
@@ -43,6 +44,7 @@ jobs:
           MIRROR: ${{ vars.PUBLIC_MIRROR }}
           KEY: ${{ secrets.PUBLIC_DEPLOY_KEY }}
           TAG: ${{ github.ref_name }}
+          LEAKSCAN_TERMS: ${{ secrets.LEAKSCAN_TERMS }}
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
@@ -53,7 +55,9 @@ jobs:
           # タグの中身で置き換える（.git は残す）
           find mirror -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           git archive "$TAG" | tar -x -C mirror
-          rm -rf mirror/.github/workflows   # 公開ミラーでは CI を動かさない（Secrets を置かない展示用）
+          # .github/public/（見本の設定・合成サンプル）をルートへ移し、CI の定義は外す（公開ミラーは Secrets を置かない展示用）
+          # 続けて4層12項目の固定監査（機械判定10項目）。1つでも ✗ なら push しない（Fail-Closed）
+          python src/dartmouth/release_audit.py --dir mirror --arrange --tag "$TAG" --strict
           cd mirror
           git add -A
           if git diff --cached --quiet; then echo "変更なし"; exit 0; fi

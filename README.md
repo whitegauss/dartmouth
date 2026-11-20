@@ -41,9 +41,9 @@ This runs a full two-topic meeting with dummy agents (canned answers, random del
 ## Your first real meeting
 
 ```sh
-dm init                 # writes config.yaml from examples/dummy.yaml
-$EDITOR config.yaml     # set the purpose, topics and participants (replace adapter: dummy with real ones)
-dm run                  # TUI
+dm init                       # writes config.local.yaml from examples/dummy.yaml
+$EDITOR config.local.yaml     # set the purpose, topics and participants (replace adapter: dummy with real ones)
+dm run                  # TUI (config: -c, else $DARTMOUTH_CONFIG, else ./config.local.yaml; stops if none)
 dm run --ui plain       # plain stdin/stdout
 dm run --ui web         # Web UI (prints URLs with an access token)
 dm run --headless       # run every topic unattended; approvals are left pending
@@ -168,7 +168,9 @@ ln -s ../../scripts/pre-commit .git/hooks/pre-commit   # scan what you are about
 gh secret set LEAKSCAN_TERMS < ~/dartmouth-personal/leak_terms.txt   # strict scan in CI (.github/workflows/leakscan.yml)
 ```
 
-CI runs the generic scan on every push and PR, and the strict scan on pushes to `master` and PRs from this repository; the strict job fails if the secret is missing instead of skipping.
+CI runs the generic scan on every push and PR, and the strict scan on pushes to `master` and PRs from this repository; the strict job fails if the secret is missing instead of skipping. Locally, `--strict --allow-missing-secrets` downgrades a missing list to a warning.
+
+Releases go to a separate public mirror: pushing a `release-v*` tag runs `.github/workflows/sync-public.yml`, which assembles the published tree (the repository without CI files, plus `.github/public/`: an example `config.example.yaml` and two synthetic sample meetings), runs the strict scan and `dm release-audit` (12 checks in 4 layers, see [docs/release-checklist.md](docs/release-checklist.md)), and only then pushes one commit under a project author. Manual sign-off: [docs/release-signoff.md](docs/release-signoff.md).
 
 ## License
 

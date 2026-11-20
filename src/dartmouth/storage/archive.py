@@ -167,7 +167,7 @@ def participants_info(d: Path) -> dict[str, dict[str, Any]]:
         if not isinstance(p, dict):
             continue
         out[n] = {"display_name": p.get("display_name") or n.capitalize(), "adapter": p.get("adapter"),
-                  "model": p.get("model"), "role": p.get("role", "member")}
+                  "model": p.get("model"), "role": p.get("role", "member"), "public_id": p.get("public_id") or ""}
     # 議長が議題ごとに決めた席（設定ファイルには無い参加者）
     for r in read_transcript(d / "transcript.jsonl"):
         if r.get("event") == "seating":
@@ -298,6 +298,7 @@ def stat_rows(d: Path, recs: list[dict[str, Any]] | None = None) -> tuple[list[d
         i = info.get(spk, {})
         row = rows.setdefault((spk, rnd), {c: 0 for c in STAT_COLUMNS} | {
             "meeting": d.name, "participant": spk, "display_name": i.get("display_name", spk), "model": i.get("model") or "",
+            "public_id": i.get("public_id") or "",
             "round": rnd, "errors": {}, "_prompt": [], "_usage_calls": 0, "_ctx": 0, "_pp": 0})
         row["calls"] += 1
         row[r["status"]] = row.get(r["status"], 0) + 1

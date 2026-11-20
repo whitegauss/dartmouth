@@ -211,3 +211,27 @@ def test_chair_override_neon(tmp_path):
     # effort だけ変えるときは、今の Neon のまま
     cfg = apply_chair_override(cfg, effort="low")
     assert cfg.participants["chair"].options()["model"] == "gemini-4-neon-low"
+
+
+def test_resolve_config_path_single_route(tmp_path, monkeypatch):
+    from dartmouth.config import resolve_config_path
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("DARTMOUTH_CONFIG", raising=False)
+    # どれも無い: 案内を出して終了コード1（config.yaml や個人用の場所には落とさない）
+    (tmp_path / "config.yaml").write_text("participants: {}\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        resolve_config_path(None)
+    assert "cp config.example.yaml config.local.yaml" in str(e.value.code) and "dm init" in str(e.value.code)
+    # ./config.local.yaml を読む
+    (tmp_path / "config.local.yaml").write_text("participants: {}\n", encoding="utf-8")
+    assert resolve_config_path(None) == Path("config.local.yaml")
+    # 環境変数が優先。指した先が無ければ止まる
+    other = tmp_path / "other.yaml"
+    monkeypatch.setenv("DARTMOUTH_CONFIG", str(other))
+    with pytest.raises(SystemExit):
+        resolve_config_path(None)
+    other.write_text("participants: {}\n", encoding="utf-8")
+    assert resolve_config_path(None) == other
+    # -c がいちばん優先
+    assert resolve_config_path("x.yaml") == Path("x.yaml")

@@ -118,6 +118,9 @@ def test_leakscan_terms_word_boundary_ignore_and_no_echo(capsys):
     assert "argon" not in out.lower() and "ほげプラン" not in out  # 当たった語そのものはログに出さない
     # 固有語リストがないのに必須なら失敗（Secrets 不在で検査を飛ばさない）
     assert run([("b.md", "ok")], "", require_terms=True, max_ignores=5) == 2
+    # ローカルだけの逃げ道: 警告して汎用パターンだけで続ける
+    assert run([("b.md", "ok")], "", require_terms=True, max_ignores=5, allow_missing=True) == 0
+    assert "警告" in capsys.readouterr().out
     # leakscan:ignore の上限超過も失敗
     assert run([("c.md", "x leakscan:ignore\n" * 3)], "x\n", require_terms=False, max_ignores=2) == 1
     assert run([("d.md", "clean")], "argon\n", require_terms=True, max_ignores=5) == 0

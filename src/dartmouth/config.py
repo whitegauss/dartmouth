@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 from typing import Any, Literal
 
@@ -175,6 +177,8 @@ class ParticipantConfig(BaseModel):
     share_scope: Literal["all", "public_only"] = "all"
     retries: int = 1
     color: str | None = None
+    # 公開用の抽象ID（例: chair-A、seat-H1）。dm stats --public で参加者IDの代わりに出す。実モデルとの対応はこの設定ファイル側にだけ置く
+    public_id: str | None = None
     # 再試行しても失敗したとき: pause=会議を一時停止してユーザーに聞く / skip=そのラウンドは欠席で続行
     # 省略時は、議長なら pause、それ以外は skip
     on_failure: Literal["pause", "skip"] | None = None
@@ -358,6 +362,30 @@ def _load_yaml_with_extends(path: Path, seen: set[Path] | None = None) -> dict[s
             ep = rp.parent / ep
         merged = _deep_merge(merged, _load_yaml_with_extends(ep, seen))
     return _deep_merge(merged, data)
+
+
+LOCAL_CONFIG = "config.local.yaml"
+
+
+def resolve_config_path(explicit: str | Path | None = None) -> Path:
+    """dm run が読む設定ファイルを1つだけ決める: -c ＞ 環境変数 DARTMOUTH_CONFIG ＞ ./config.local.yaml。
+
+    どれも無ければ案内を出して終了コード1で止まる（個人用の場所や別名のファイルには落とさない）。
+    """
+    if explicit:
+        return Path(explicit)
+    env = os.environ.get("DARTMOUTH_CONFIG")
+    if env:
+        if not Path(env).expanduser().exists():
+            raise SystemExit(f"DARTMOUTH_CONFIG の設定ファイル {env} がありません。")
+        return Path(env).expanduser()
+    if Path(LOCAL_CONFIG).exists():
+        return Path(LOCAL_CONFIG)
+    raise SystemExit(
+        "設定ファイルがありません。次のどれかで用意してください（DARTMOUTH_CONFIG ＞ ./config.local.yaml の順に読みます）:\n"
+        f"  cp config.example.yaml {LOCAL_CONFIG}    # 公開リポジトリの見本から\n"
+        f"  dm init                                  # ひな形（examples/dummy.yaml）から {LOCAL_CONFIG} を作る\n"
+        "  export DARTMOUTH_CONFIG=/path/to/config.yaml")
 
 
 def load_config(path: str | Path, agents_path: str | Path | None = None) -> Config:

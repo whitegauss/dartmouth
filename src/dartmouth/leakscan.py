@@ -13,7 +13,8 @@
 
     python src/dartmouth/leakscan.py                     # 追跡しているファイル全部（汎用パターン＋あれば固有語）
     python src/dartmouth/leakscan.py --staged            # コミットしようとしている内容（pre-commit 用）
-    python src/dartmouth/leakscan.py --require-terms     # 固有語リストがないと失敗（本流へのマージ前の CI 用）
+    python src/dartmouth/leakscan.py --strict            # 固有語リストがないと失敗（CI 用。--require-terms と同じ）
+    python src/dartmouth/leakscan.py --strict --allow-missing-secrets   # ローカルで固有語リストがないときは警告だけ
 """
 
 from __future__ import annotations
@@ -122,12 +123,16 @@ def load_terms(path: str | None) -> str:
     return os.environ.get("LEAKSCAN_TERMS", "")
 
 
-def run(files: list[tuple[str, str]], terms_text: str, require_terms: bool, max_ignores: int, out=None) -> int:
+def run(files: list[tuple[str, str]], terms_text: str, require_terms: bool, max_ignores: int, out=None,
+        allow_missing: bool = False) -> int:
     out = out or sys.stdout
     terms = parse_terms(terms_text)
     if require_terms and not terms:
-        print("leakscan: 固有語リストがありません（LEAKSCAN_TERMS か --terms）。--require-terms のため失敗にします", file=out)
-        return 2
+        if not allow_missing:
+            print("leakscan: 固有語リストがありません（LEAKSCAN_TERMS か --terms）。--strict のため失敗にします", file=out)
+            return 2
+        # ローカル開発だけの逃げ道（Q-003）。CI では使わない（sync-public / leakscan.yml は失敗で止める）
+        print("leakscan: 警告: 固有語リストがないため、汎用パターンだけで調べます（--allow-missing-secrets）", file=out)
     rules = PATTERNS + terms
     hits, ignored = [], 0
     for path, text in files:
@@ -149,10 +154,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="leakscan", description=__doc__.split("\n\n")[0])
     ap.add_argument("--staged", action="store_true", help="コミットしようとしている内容だけを調べる（pre-commit 用）")
     ap.add_argument("--terms", help="固有語リストのファイル（省くと環境変数 LEAKSCAN_TERMS）")
-    ap.add_argument("--require-terms", action="store_true", help="固有語リストがなければ失敗にする")
+    ap.add_argument("--require-terms", "--strict", dest="require_terms", action="store_true",
+                    help="固有語リストがなければ失敗にする（CI の strict 検査）")
+    ap.add_argument("--allow-missing-secrets", action="store_true",
+                    help="--strict でも固有語リストがなければ警告だけで続ける（ローカル開発用。CI では使わない）")
     ap.add_argument("--max-ignores", type=int, default=DEFAULT_MAX_IGNORES, help=f"{IGNORE_MARK} の上限（既定 {DEFAULT_MAX_IGNORES}）")
     a = ap.parse_args(argv)
-    return run(targets(a.staged), load_terms(a.terms), a.require_terms, a.max_ignores)
+    return run(targets(a.staged), load_terms(a.terms), a.require_terms, a.max_ignores, allow_missing=a.allow_missing_secrets)
 
 
 if __name__ == "__main__":

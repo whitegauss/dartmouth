@@ -1,0 +1,32 @@
+# Dartmouth の設定の見本（公開リポジトリにだけ置く。作業リポジトリでは .github/public/ にある）
+#   cp config.example.yaml config.local.yaml   ← dm run は -c ＞ $DARTMOUTH_CONFIG ＞ ./config.local.yaml の順に読む
+# このままでも動く（adapter: dummy の合成エージェント）。実際に使うときは adapter と model を自分の経路に置き換える。
+# 公開用の決まり: ここには実モデル名・個人のパスを書かない。参加者は抽象ID（public_id）と能力クラスだけで表し、
+# 実モデルとの対応は config.local.yaml 側に書く（dm stats --public は public_id で出す）。
+meeting:
+  name: sample
+  purpose: Smoke-test Dartmouth with synthetic agents
+  topics:
+    - title: Which storage layout fits a small always-on server?
+      premise: Budget and capacity are placeholders for the sample.
+  critique_rounds: 2
+  approval: auto
+meetings_dir: ./data/sample          # 合成の会議記録（正常系・異常系の2件）
+participants:
+  chair-a:
+    adapter: dummy
+    role: chair
+    public_id: chair-A               # 議長（能力クラス tier-H）
+  seat-h1:
+    adapter: dummy
+    role: engineer
+    public_id: seat-H1               # 重い席（tier-H）
+  seat-l1:
+    adapter: dummy
+    role: researcher
+    public_id: seat-L1               # 軽い席（tier-L）
+  seat-l2:
+    adapter: dummy
+    role: critic
+    optional: true
+    public_id: seat-L2               # 軽い席（tier-L）

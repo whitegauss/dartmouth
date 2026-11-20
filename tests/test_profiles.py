@@ -43,3 +43,10 @@ def test_rows_without_usage_get_blank_cost(pricing):
     row = {"meeting": "m", "participant": "a", "model": "small-model", "input": "", "output": "", "cache_read": "",
            "cache_creation": "", "thinking": ""}
     assert private_stat_rows([row], pricing)[0]["cost_usd"] == "" and public_stat_rows([row], pricing)[0]["cost_rel"] == ""
+
+
+def test_public_rows_use_public_id(pricing):
+    row = {"meeting": "m", "participant": "critic", "public_id": "seat-H1", "display_name": "x", "model": "big-model",
+           "input": 1, "output": 1, "cache_read": 0, "cache_creation": 0, "thinking": 0}
+    pub = public_stat_rows([row], pricing)[0]
+    assert pub["participant"] == "seat-H1" and pub["display_name"] == "seat-H1"

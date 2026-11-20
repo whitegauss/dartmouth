@@ -33,7 +33,8 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="会議を開始する")
-    run.add_argument("-c", "--config", default="config.yaml", help="議題・会議設定の YAML（既定: config.yaml）")
+    run.add_argument("-c", "--config", default=None,
+                     help="議題・会議設定の YAML。省くと DARTMOUTH_CONFIG ＞ ./config.local.yaml の順に探す（無ければ止まる）")
     run.add_argument("-a", "--agents", default=None, help="議長・配役・バックエンド設定の YAML（別指定する場合）")
     run.add_argument("--chair", choices=["neon", "argon", "opus"], default=None, help="議長モデルを明示指定（neon / argon / opus）")
     run.add_argument("--chair-effort", choices=["low", "medium", "high"], default=None, help="議長の推論 effort（low / medium / high）")
@@ -119,8 +120,14 @@ def main(argv: list[str] | None = None) -> None:
     leak = sub.add_parser("leakscan", help="公開リポジトリに個人の情報（パス・メール・鍵・固有語）が混ざっていないか調べる。あれば終了コード1")
     leak.add_argument("--staged", action="store_true", help="コミットしようとしている内容だけ（pre-commit 用）")
     leak.add_argument("--terms", help="固有語リストのファイル（省略時は環境変数 LEAKSCAN_TERMS、なければ個人用ディレクトリの leak_terms.txt）")
-    leak.add_argument("--require-terms", action="store_true", help="固有語リストがなければ失敗にする")
+    leak.add_argument("--require-terms", "--strict", dest="require_terms", action="store_true", help="固有語リストがなければ失敗にする")
+    leak.add_argument("--allow-missing-secrets", action="store_true", help="--strict でも固有語リストがなければ警告だけで続ける（ローカル用）")
     leak.add_argument("--max-ignores", type=int, default=5, help="leakscan:ignore の上限（既定5）")
+    ra = sub.add_parser("release-audit", help="公開ミラーに置く形のツリーを4層12項目で監査する（機械判定10項目。✗ があれば終了コード1）")
+    ra.add_argument("--tag", help="リリースのタグ名")
+    ra.add_argument("--worktree", action="store_true", help="コミット前の作業ツリーから組む")
+    ra.add_argument("--strict", action="store_true", help="固有語リストがなければ ✗")
+    ra.add_argument("--allow-missing-secrets", action="store_true", help="--strict でも固有語リストがなければ警告だけ（ローカル用）")
     blind = sub.add_parser("blind", help="議事録からモデル名・ペルソナ名・条件名を伏せる（残れば終了コード1）")
     blind.add_argument("target", help="会議のディレクトリ（minutes.md を使う）か、議事録のファイル")
     blind.add_argument("-o", "--output", help="書き出し先（省略時は標準出力）")
@@ -131,20 +138,20 @@ def main(argv: list[str] | None = None) -> None:
 
     add_ledger_parser(sub)
 
-    init = sub.add_parser("init", help="examples/dummy.yaml をひな形にして config.yaml を作る")
-    init.add_argument("dest", nargs="?", default="config.yaml")
+    init = sub.add_parser("init", help="examples/dummy.yaml をひな形にして config.local.yaml を作る")
+    init.add_argument("dest", nargs="?", default="config.local.yaml")
 
 
     args = parser.parse_args(argv)
 
     def _load(path: str, agents_path: str | None = None, chair: str | None = None, effort: str | None = None):
         from .agenda import split_ref
-        from .config import apply_chair_override
+        from .config import apply_chair_override, resolve_config_path
 
+        path = str(resolve_config_path(path))
         p = split_ref(path)[0]  # 「議題.yaml#案件id」は、ファイルの部分で確かめる
         if not p.exists():
-            hint = "dm init でひな形を作るか、" if path == "config.yaml" else ""
-            raise SystemExit(f"設定ファイル {path} がありません。{hint}-c で設定ファイルを指定してください"
+            raise SystemExit(f"設定ファイル {path} がありません。-c で設定ファイルを指定してください"
                              "（例: dm run -c examples/dummy.yaml --ui web）")
         if agents_path and not Path(agents_path).exists():
             raise SystemExit(f"議長・参加者設定ファイル {agents_path} がありません。")
@@ -290,6 +297,8 @@ def main(argv: list[str] | None = None) -> None:
 
         from .storage.archive import STAT_COLUMNS, seat_history, stat_rows
 
+        if args.seats and args.public:
+            raise SystemExit("エラー: 席の成績（seat_history）は公開しない決まりです（--seats と --public は一緒に使えません）")
         if args.seats:
             dirs = sorted({Path(d).resolve().parent for d in args.meeting_dirs})
             hist = sorted(seat_history(dirs).values(), key=lambda h: (h["persona"], -(h["avg_score"] or 0)))
@@ -380,8 +389,20 @@ def main(argv: list[str] | None = None) -> None:
         if not terms and not os.environ.get("LEAKSCAN_TERMS") and (personal_dir() / "leak_terms.txt").exists():
             terms = str(personal_dir() / "leak_terms.txt")
         argv = (["--staged"] if args.staged else []) + (["--terms", terms] if terms else []) \
-            + (["--require-terms"] if args.require_terms else []) + ["--max-ignores", str(args.max_ignores)]
+            + (["--require-terms"] if args.require_terms else []) + (["--allow-missing-secrets"] if args.allow_missing_secrets else []) \
+            + ["--max-ignores", str(args.max_ignores)]
         raise SystemExit(leakscan(argv))
+    if args.command == "release-audit":
+        import os
+
+        from .paths import personal_dir
+        from .release_audit import main as release_audit
+
+        argv = (["--tag", args.tag] if args.tag else []) + (["--worktree"] if args.worktree else []) \
+            + (["--strict"] if args.strict else []) + (["--allow-missing-secrets"] if args.allow_missing_secrets else [])
+        if not os.environ.get("LEAKSCAN_TERMS") and (personal_dir() / "leak_terms.txt").exists():
+            argv += ["--terms", str(personal_dir() / "leak_terms.txt")]
+        raise SystemExit(release_audit(argv))
     if args.command == "blind":
         from .blind import run as run_blind
 

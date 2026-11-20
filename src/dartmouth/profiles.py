@@ -104,7 +104,8 @@ def public_stat_rows(rows: list[dict[str, Any]], pricing: dict[str, dict[str, An
     out = []
     for r in rows:
         usd = row_cost(pricing, r)
-        out.append({**r, "model": profile(pricing, r.get("model") or ""), "display_name": r.get("participant", ""),
+        pid = r.get("public_id") or r.get("participant", "")  # 設定に抽象ID（public_id）があればそれを出す
+        out.append({**r, "model": profile(pricing, r.get("model") or ""), "participant": pid, "display_name": pid,
                     "cost_rel": "" if usd is None else round(relative_cost(pricing, usd), 4)})
     return out
 
