@@ -1,0 +1,45 @@
+# 共通エージェント設定の見本。agents.yaml にコピーして使う（agents.yaml は gitignore 済み。個人用ディレクトリ ~/dartmouth-personal に置いてもよい）
+# 共通エージェント設定（議長・席決め・バックエンド・予算）
+# 議題 YAML とは別に読み込む（議長モデルと effort は CLI や Web UI で明示指定可能）
+budget:
+  max_calls: 60
+  max_chars_per_message: 3000   # 上限いっぱいまで書くと遅くなるので、目安（独立回答1500字・相互批判800字）はプロンプトで伝える
+participants:
+  chair:
+    adapter: antigravity_cli
+    model: gemini-4-argon-medium # 既定の議長（Argon）。CLI / Web UI で Argon / Opus と effort を指定できる
+    role: chair
+    display_name: 議長(Argon)
+    timeout_s: 300
+    tools: []
+    persona_file: prompts/personas/chair.md
+# 議長が議題ごとに、利用上限を見ながらペルソナと経路（モデル）を選んで席を作る
+seating:
+  personas: [manager, engineer, researcher, critic, user_advocate, security, quota, risk]
+  # 毎議題かならず座る席。利用上限に当たっていないモデルをローテーションして使う
+  fixed:
+    - {persona: manager, backends: [agy, agy-flash, haiku], reason: ビジネス側の判断役（固定）}
+  min_seats: 2
+  max_seats: 3
+  explore_seats: 1   # データが揃うまで、毎議題1席は試した回数の少ないモデルで座らせる（ローテーション）
+  backends:
+    agy:
+      adapter: antigravity_cli
+      model: gemini-4-hydrogen-medium
+      timeout_s: 240
+      note: Gemini 4 Hydrogen（agy 経由）。1回15秒前後
+    agy-flash:
+      adapter: antigravity_cli
+      model: gemini-3.8-flash-medium
+      timeout_s: 180
+      note: Gemini 3.8 Flash（agy 経由）。軽くて速い
+    sonnet:
+      adapter: claude_code
+      model: sonnet
+      timeout_s: 240
+      note: Claude Sonnet。Gemini 上限時の自動切替先・主力
+    haiku:
+      adapter: claude_code
+      model: haiku
+      timeout_s: 180
+      note: Claude Haiku。軽くて速い

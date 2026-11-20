@@ -1,0 +1,1 @@
+**注意**: 前回の出力は extension_requested が true なのに handover（申し送り）が空でした。延長するなら申し送りは必須です。現時点の最良案・残っている論点・延長で答えるべき問いを handover に書いてください。申し送りを書けないほど論点が固まっていないなら、extension_requested を false にしてください。指定のJSONだけを出力すること。

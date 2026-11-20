@@ -1,0 +1,33 @@
+# Try Dartmouth without any real CLI:  dm run -c examples/dummy.yaml
+# Dummy agents answer with canned text after a random delay; `critic` fails 30% of the time
+# to show how optional participants are skipped.
+meeting:
+  name: dummy-demo
+  purpose: Smoke-test Dartmouth
+  topics:
+    - What data do I have, and how much?
+    - Software layout on Linux and required capacity
+budget:
+  max_calls: 40
+meetings_dir: ../meetings
+prompts_dir: ../prompts
+participants:
+  claude:
+    adapter: dummy
+    role: chair
+    delay_s: [0.5, 2]
+  gemini:
+    adapter: dummy
+    role: researcher
+    delay_s: [0.5, 3]
+  engineer:
+    adapter: dummy
+    role: engineer
+    delay_s: [0.5, 3]
+  critic:
+    adapter: dummy
+    role: third_opinion
+    optional: true
+    share_scope: public_only
+    delay_s: [1, 4]
+    fail_rate: 0.3

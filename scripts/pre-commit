@@ -1,0 +1,25 @@
+#!/bin/sh
+# コミットする内容に個人の情報が混ざっていないかを調べる。
+# 1. 個人用のファイル（会議の記録・個人設定など）がステージされていたら止める
+# 2. leakscan: パス・メール・鍵・トークンと、固有語（個人用ディレクトリの leak_terms.txt）
+# 入れ方: ln -s ../../scripts/pre-commit .git/hooks/pre-commit
+# 一時的に飛ばす: git commit --no-verify
+root=$(git rev-parse --show-toplevel)
+
+bad=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -E '^(context/|local/|meetings/.+|config\.yaml$|agents\.yaml$|.*\.local\.yaml$|.*\.bak$|\.dartmouth-index/|.*\.sqlite$)' \
+  | grep -v '^meetings/\.gitkeep$')
+if [ -n "$bad" ]; then
+  echo "pre-commit: 個人用のファイルがステージされています（git restore --staged で外してください）:" >&2
+  echo "$bad" >&2
+  exit 1
+fi
+
+py="$root/.venv/bin/python"; [ -x "$py" ] || py=python3
+terms="${DARTMOUTH_PERSONAL_DIR:-$root/../dartmouth-personal}/leak_terms.txt"
+[ -f "$terms" ] || terms="$HOME/dartmouth-personal/leak_terms.txt"
+if [ -f "$terms" ]; then
+  exec "$py" "$root/src/dartmouth/leakscan.py" --staged --terms "$terms"
+else
+  exec "$py" "$root/src/dartmouth/leakscan.py" --staged
+fi

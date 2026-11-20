@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# テストを回し、通ったら1行だけ、落ちたら落ちたテストの要点だけを出す（出力を短くしてトークンを節約する）
+#   scripts/t                 全部
+#   scripts/t tests/test_web.py -k watch
+cd "$(dirname "$0")/.." || exit 1
+out=$(timeout 600 uv run pytest -q -p no:warnings --no-header --tb=short -rfE "$@" 2>&1)
+code=$?
+if [ $code -eq 0 ]; then
+  echo "$out" | tail -1
+else
+  # 失敗の詳細（--tb=short）と最後の要約だけ。通ったテストの点や警告は出さない
+  echo "$out" | sed -n '/^=* FAILURES =*$/,$p;/^=* ERRORS =*$/,$p' | grep -v '^\.\+\s*\[' | head -150
+  [ -z "$(echo "$out" | grep -E '^=+ (FAILURES|ERRORS)')" ] && echo "$out" | tail -30
+fi
+exit $code

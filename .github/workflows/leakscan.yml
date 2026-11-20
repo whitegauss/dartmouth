@@ -1,0 +1,31 @@
+# 公開リポジトリに個人の情報が混ざっていないかを調べる（src/dartmouth/leakscan.py）
+# - 汎用パターン（パス・メール・鍵など）: すべての push と PR
+# - 固有語リスト（Secrets の LEAKSCAN_TERMS）: 本流への push と、このリポジトリ内のブランチからの PR。
+#   Secrets がなければ失敗にする（検査を黙って飛ばさない）。フォークからの PR には Secrets が渡らないので、
+#   マージ後の本流 push で必ず調べる
+name: leakscan
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  generic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python src/dartmouth/leakscan.py
+  strict:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' || github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python src/dartmouth/leakscan.py --require-terms
+        env:
+          LEAKSCAN_TERMS: ${{ secrets.LEAKSCAN_TERMS }}
