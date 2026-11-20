@@ -82,6 +82,10 @@ class ClaudeCodeAdapter(CLIAdapter):
         u = d.get("usage") or {}
         tokens = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")) or None
         usage = {k: int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")}
+        model_usage = d.get("modelUsage")
+        model = d.get("model")
+        if not isinstance(model, str) and isinstance(model_usage, dict) and len(model_usage) == 1:
+            model = next(iter(model_usage))
         return Reply(text, tokens=tokens, structured=structured,
                      meta={"session_id": d.get("session_id"), "cost_usd": d.get("total_cost_usd"),
-                           "turns": d.get("num_turns"), "usage": usage})
+                           "turns": d.get("num_turns"), "usage": usage, "model": model})

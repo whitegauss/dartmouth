@@ -24,3 +24,8 @@ local/
 
 # 書き出し（全アイテムの Markdown など。個人のデータを含む）
 exports/
+
+# 比較実験の個人設定と台帳ロック
+/configs/experiment.yaml
+/REPORT-phase1.md
+*.csv.lock

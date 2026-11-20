@@ -74,4 +74,5 @@ class AntigravityCLIAdapter(CLIAdapter):
         u = d.get("usage") or {}
         tokens = u.get("total_tokens")
         return Reply(text, tokens=tokens, meta={"conversation_id": d.get("conversation_id"), "turns": d.get("num_turns"),
+                                                "model": d.get("model"),
                                                 "usage": {k: u.get(k) for k in ("input_tokens", "output_tokens", "thinking_tokens", "cache_read_tokens")}})

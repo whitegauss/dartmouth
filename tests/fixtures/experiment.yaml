@@ -1,0 +1,41 @@
+topics:
+  "1": {prompt: "テスト用の議題1"}
+  "2": {prompt: "テスト用の議題2", restricted: true}
+  "3": {prompt: "テスト用の議題3", share_scope: public}
+pilot_topic: "1"
+pilot_conditions: [A, C]
+forbidden_words: ["試験用禁止語"]
+conditions:
+  A:
+    roles_standard: neon
+    roles_reversed: argon
+    seats:
+      - id: manager
+        persona: manager
+        adapter: antigravity_cli
+        model: fixture-high-a
+        effort: high
+        fallback: {adapter: claude_code, model: fixture-fallback, effort: high}
+      - {id: engineer, persona: engineer, adapter: antigravity_cli, model: fixture-high-a, effort: high}
+  B:
+    roles_standard: neon
+    roles_reversed: argon
+    seats:
+      - {id: manager, persona: manager, adapter: antigravity_cli, model: fixture-low-b, effort: low}
+      - {id: engineer, persona: engineer, adapter: antigravity_cli, model: fixture-low-b, effort: low}
+      - {id: critic, persona: critic, adapter: antigravity_cli, model: fixture-low-b, effort: low}
+      - {id: quota, persona: quota, adapter: antigravity_cli, model: fixture-low-b, effort: low}
+  C:
+    roles_standard: opus
+    roles_reversed: neon
+    seats:
+      - {id: manager, persona: manager, adapter: claude_code, model: fixture-high-c, effort: high}
+      - {id: engineer, persona: engineer, adapter: claude_code, model: fixture-high-c, effort: high}
+  D:
+    roles_standard: opus
+    roles_reversed: neon
+    seats:
+      - {id: manager, persona: manager, adapter: claude_code, model: fixture-low-d, effort: low}
+      - {id: engineer, persona: engineer, adapter: claude_code, model: fixture-low-d, effort: low}
+      - {id: critic, persona: critic, adapter: claude_code, model: fixture-low-d, effort: low}
+      - {id: quota, persona: quota, adapter: claude_code, model: fixture-low-d, effort: low}
