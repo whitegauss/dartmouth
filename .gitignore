@@ -21,3 +21,6 @@ local/
 *.bak
 # 資料庫の索引
 .dartmouth-index/
+
+# 書き出し（全アイテムの Markdown など。個人のデータを含む）
+exports/

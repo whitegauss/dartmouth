@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from ..adapters import REGISTRY
@@ -244,6 +244,18 @@ def register_admin(app: FastAPI, hub, auth) -> None:
                                 "topic_title": topics.get(it.get("topic"), ""), "owner": it.get("owner"), **it})
         out.sort(key=lambda x: (x["meeting_date"], x["meeting"], x["id"]), reverse=True)
         return out
+
+    @app.get("/api/export.md", dependencies=auth)
+    async def export_md(download: bool = False) -> PlainTextResponse:
+        """全会議・全アイテムを1つの Markdown に（dm export-md と同じ。読み取りだけ）。"""
+        from datetime import datetime
+
+        from ..export_md import export_markdown
+        from ..paths import ledger_path
+
+        text = await asyncio.to_thread(export_markdown, hub.meetings_dirs(), ledger_path())
+        headers = {"Content-Disposition": f'attachment; filename="dartmouth-items-{datetime.now():%Y%m%d}.md"'} if download else {}
+        return PlainTextResponse(text, media_type="text/markdown; charset=utf-8", headers=headers)
 
     @app.post("/api/items/status", dependencies=auth)
     async def item_status(body: ItemStatusIn) -> JSONResponse:

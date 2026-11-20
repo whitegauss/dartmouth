@@ -35,7 +35,7 @@ DEFAULT_MAX_IGNORES = 5
 PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("home-path", re.compile(r"(?:/home/|/Users/)(?!runner\b|user\b|me\b|you\b|<|\$|\{)[A-Za-z0-9._-]+")),
     ("windows-home", re.compile(r"[A-Za-z]:\\\\?Users\\\\?(?!Public\b|<)[A-Za-z0-9._-]+")),
-    ("email", re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.(?:com|org|net)\b|anthropic\.com\b|users\.noreply\.github\.com\b)"
+    ("email", re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.(?:com|org|net)\b|anthropic\.com\b|users\.noreply\.github\.com\b|github\.com\b)"
                          r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")),
     ("api-key", re.compile(r"\b(?:sk-(?:ant-)?[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|gh[pousr]_[A-Za-z0-9]{30,}"
                            r"|xox[abpr]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{20,})")),

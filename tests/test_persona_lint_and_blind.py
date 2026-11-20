@@ -98,7 +98,7 @@ def test_leakscan_generic_patterns_positive_and_negative():
     for rule, line in bad.items():
         hits, _ = scan_text("f", line, PATTERNS)
         assert [h.rule for h in hits] == [rule], (rule, line)
-    good = ["/home/runner/work", "/home/<user>/x", "noreply@anthropic.com", "a@example.com", "100.64.0.0/10",
+    good = ["/home/runner/work", "/home/<user>/x", "noreply@anthropic.com", "a@example.com", "git@github.com:o/r.git", "100.64.0.0/10",
             "sk-short", "Bearer token", "192.168.1.5"]
     for line in good:
         assert scan_text("f", line, PATTERNS)[0] == [], line

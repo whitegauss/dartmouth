@@ -92,6 +92,15 @@ class Ledger:
         self.db.execute("INSERT OR IGNORE INTO meta VALUES('schema', ?)", (SCHEMA_VERSION,))
         self.db.commit()
 
+    @classmethod
+    def readonly(cls, path: str | Path) -> "Ledger":
+        """読み取り専用で開く（スキーマの作成・列の追加をしない。書き込もうとすると SQLite がエラーにする）。"""
+        lg = cls.__new__(cls)
+        lg.path = Path(path)
+        lg.db = sqlite3.connect(f"file:{lg.path}?mode=ro", uri=True, check_same_thread=False)
+        lg.db.row_factory = sqlite3.Row
+        return lg
+
     def close(self) -> None:
         self.db.close()
 

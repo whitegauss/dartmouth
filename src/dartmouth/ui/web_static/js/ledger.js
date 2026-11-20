@@ -60,14 +60,7 @@ async function lgPackText() {
   if (!r.ok) throw new Error(`書き出せません（${r.status}）`);
   return r.text();
 }
-async function lgCopy(text) {
-  try { await navigator.clipboard.writeText(text); return; } catch (e) { /* http（Tailscale のアドレスなど）では使えない */ }
-  const ta = Object.assign(document.createElement("textarea"), {value: text});
-  ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
-  document.body.appendChild(ta); ta.select();
-  const ok = document.execCommand("copy"); ta.remove();
-  if (!ok) throw new Error("コピーできませんでした。「.md を保存」を使ってください");
-}
+const lgCopy = copyText;
 $("lgPackCopy").onclick = async () => {
   try { const t = await lgPackText(); await lgCopy(t); toast(`コピーしました（${nf.format(t.length)} 字）`, "ok"); }
   catch (e) { toast(e.message, "error"); }

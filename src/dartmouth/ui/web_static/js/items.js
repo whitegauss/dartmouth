@@ -52,3 +52,13 @@ $("itemsStart").onclick = () => {
   if (lastState && lastState.mode === "meeting" && lastState.meeting.running) { toast("進行中の会議があります。閉じてから始めてください", "warning"); return; }
   location.hash = "#/";
 };
+$("itemsExportCopy").onclick = async () => {
+  const b = $("itemsExportCopy"); b.disabled = true;
+  try {
+    const r = await fetch("/api/export.md");
+    if (!r.ok) throw new Error(`書き出せません（${r.status}）`);
+    const t = await r.text();
+    await copyText(t);
+    toast(`全アイテムをコピーしました（${nf.format(t.length)} 字）`, "ok");
+  } catch (e) { toast(e.message, "error"); } finally { b.disabled = false; }
+};

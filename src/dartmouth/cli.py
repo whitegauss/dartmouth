@@ -102,12 +102,20 @@ def main(argv: list[str] | None = None) -> None:
     stats.add_argument("meeting_dirs", nargs="+")
     stats.add_argument("--csv", help="集計行を書き出す CSV ファイル")
     stats.add_argument("--seats", action="store_true", help="ペルソナ×経路（モデル）の成績（座った回数・議長の採点・トークン）を出す")
+    stats.add_argument("--cost", action="store_true", help="単価表（pricing.yaml）から実金額 cost_usd 列を足す（手元で見る用）")
+    stats.add_argument("--public", action="store_true",
+                       help="公開用: モデル名を抽象プロファイル（規模帯/effort ×単価比）に、金額を相対コスト cost_rel に、会議IDを S01… に置き換える")
+    stats.add_argument("--pricing", help="単価表のファイル（既定: 環境変数 DARTMOUTH_PRICING か、個人用ディレクトリの pricing.yaml）")
 
     lint = sub.add_parser("lint-personas", help="ペルソナ定義（5ブロック標準テンプレート）を検査する。違反があれば終了コード1")
     lint.add_argument("dirs", nargs="*", default=["prompts/personas"], help="ペルソナのディレクトリかファイル（既定 prompts/personas）")
     lint.add_argument("--max-tokens", type=int, default=None, help="1ファイルのトークン上限（既定 350）")
     lint.add_argument("--stats", action="store_true", help="全ファイルのトークン数と、未移行ファイルの平均を出す")
 
+    exp = sub.add_parser("export-md", help="全会議・全アイテム（決定・未決・ToDo）を1つの Markdown に書き出す（AI に渡す用。読み取りだけ）")
+    exp.add_argument("--out", help="書き出し先（省略時は標準出力）。例: exports/context-pack.md")
+    exp.add_argument("--meetings-dir", action="append", default=[], help="会議を探す場所（既定: meetings/ と個人用の meetings/）")
+    exp.add_argument("--db", help="台帳のファイル（既定: 個人用ディレクトリの ledger.sqlite。なければ台帳の情報なしで出す）")
     leak = sub.add_parser("leakscan", help="公開リポジトリに個人の情報（パス・メール・鍵・固有語）が混ざっていないか調べる。あれば終了コード1")
     leak.add_argument("--staged", action="store_true", help="コミットしようとしている内容だけ（pre-commit 用）")
     leak.add_argument("--terms", help="固有語リストのファイル（省略時は環境変数 LEAKSCAN_TERMS、なければ個人用ディレクトリの leak_terms.txt）")
@@ -297,17 +305,35 @@ def main(argv: list[str] | None = None) -> None:
             rows, total = stat_rows(Path(d).resolve())
             all_rows += rows
             totals.append(total)
+        columns = list(STAT_COLUMNS)
+        if args.cost or args.public:
+            from .profiles import UnknownModel, load_pricing, private_stat_rows, public_stat_rows
+
+            try:
+                pricing = load_pricing(args.pricing)
+                all_rows = public_stat_rows(all_rows, pricing) if args.public else private_stat_rows(all_rows, pricing)
+            except (OSError, ValueError, UnknownModel) as e:
+                raise SystemExit(f"エラー: {e}")
+            columns.append("cost_rel" if args.public else "cost_usd")
+        if args.public:
+            # 会議ID・会議名・エラー本文は個人の用途が透けるので出さない。会議は登場順に S01, S02…
+            ids = {m: f"S{i:02d}" for i, m in enumerate(dict.fromkeys(r["meeting"] for r in all_rows), 1)}
+            for r in all_rows:
+                r["meeting"] = ids[r["meeting"]]
+                r["errors"] = sum((r.get("errors") or {}).values()) if isinstance(r.get("errors"), dict) else r.get("errors")
+            totals = []
         for t in totals:
             print(f"■ {t['name']}（{t['meeting']}）: 呼び出し {t['calls']}回 · 呼び出しの合計 {t['elapsed_s']:.0f}秒（実時間 {t['wall_s']}秒）"
                   f" · トークン {t['tokens_total']:,}（cache read を除くと {t['tokens_excl_cache_read']:,}） · 失敗 {t['failures']} · 却下 {t['rejects']}"
                   f" · 議長のまとめ {t['chair_summary_s']:.0f}秒 · 議論役 {t['discussants_s']:.0f}秒 · 自己紹介のモデル呼び出し {t['intro_model_calls']}")
             ratio = t.get("context_ratio")
             print(f"  自動承認 {t['auto_approved']} · 席の自動補充 {t['seat_fallbacks']} · まとめの再要求 {t['summary_retries']}"
+                  f" · ペルソナ出力の書式違反 {t['format_violations']}"
                   f" · 重複した資料請求 {t['kb_duplicates']} · 再試行で成功 {t['retried_ok']} · 空の応答 {t['empty_responses']}"
                   f" · プロンプトのうち資料由来 {'—' if ratio is None else f'{ratio:.0%}'}"
                   f"{'（50%超: ベクトル化の見直し対象）' if ratio and ratio > 0.5 else ''}")
-        w = csv.DictWriter(open(args.csv, "w", newline="", encoding="utf-8") if args.csv else sys.stdout, fieldnames=STAT_COLUMNS, extrasaction="ignore")
-        if not args.csv:
+        w = csv.DictWriter(open(args.csv, "w", newline="", encoding="utf-8") if args.csv else sys.stdout, fieldnames=columns, extrasaction="ignore")
+        if not args.csv and totals:
             print()
         w.writeheader()
         w.writerows(all_rows)
@@ -327,6 +353,21 @@ def main(argv: list[str] | None = None) -> None:
         from .persona_lint import DEFAULT_MAX_TOKENS, lint as lint_personas
 
         raise SystemExit(lint_personas([Path(d) for d in args.dirs], args.max_tokens or DEFAULT_MAX_TOKENS, args.stats))
+    if args.command == "export-md":
+        from .export_md import export_markdown
+        from .ledger.cli import default_meeting_dirs
+        from .paths import ledger_path
+
+        dirs = [Path(d) for d in args.meetings_dir] or default_meeting_dirs()
+        text = export_markdown(dirs, Path(args.db) if args.db else ledger_path())
+        if args.out:
+            out = Path(args.out)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(text, encoding="utf-8", newline="\n")
+            print(f"{out} に書き出しました（{len(text)} 字）")
+        else:
+            sys.stdout.write(text)
+        return
     if args.command == "leakscan":
         import os
 

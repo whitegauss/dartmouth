@@ -15,6 +15,15 @@ function toast(text, level = "info") {
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const nf = new Intl.NumberFormat("ja-JP");
+/* クリップボードへ。http（Tailscale のアドレスなど）では navigator.clipboard が使えないので、選択してコピーする方法に落とす */
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return; } catch (e) { /* 下へ */ }
+  const ta = Object.assign(document.createElement("textarea"), {value: text});
+  ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+  document.body.appendChild(ta); ta.select();
+  const ok = document.execCommand("copy"); ta.remove();
+  if (!ok) throw new Error("コピーできませんでした。「.md を保存」を使ってください");
+}
 /* 担当の表示: 本人か外部待ちだけ。AI がやるもの（参加者の id・空）は担当を付けない（storage/minutes.py の owner_label と同じ） */
 function ownerLabel(o) {
   o = String(o || "").trim();

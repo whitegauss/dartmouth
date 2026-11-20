@@ -368,6 +368,7 @@ def stat_rows(d: Path, recs: list[dict[str, Any]] | None = None) -> tuple[list[d
         "intro_model_calls": sum(x["calls"] for x in out_rows if x["round"] == "intro"),
         "auto_approved": sum(1 for r in recs if r.get("event") == "approved" and r.get("auto")),
         "seat_fallbacks": sum(int(r.get("fallbacks") or 0) for r in recs if r.get("event") == "seating"),
+        "format_violations": sum(1 for r in recs if r.get("format_violation")),
         "summary_retries": sum(1 for r in recs if r.get("event") == "summary_retry"),
         "kb_duplicates": sum(1 for r in recs if r.get("event") == "kb_duplicate"),
         "retried_ok": sum(int(x["retried_ok"] or 0) for x in out_rows),

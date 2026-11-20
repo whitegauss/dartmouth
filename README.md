@@ -117,6 +117,7 @@ dm ledger classify -c agenda.yaml#my-project              # batch: AI adds ratio
 dm ledger status                             # where each project stands on its theme's shared milestones
 dm ledger blocked / ready / brief my-project       # what can't be done and why / what can be executed now / project brief for the next meeting
 dm ledger pack [my-project] [--open]          # context pack for an AI: every item with ID, state, ball (whose turn) and reason, by meeting
+dm export-md --out exports/context-pack.md   # every meeting (archived too) and every decision / open question / to-do in one Markdown, full text; also on the web: 決定・未決・ToDo → AI に渡す
 dm stats meetings/*/ --csv usage.csv         # calls, seconds, turns and token breakdown per agent and round
 ```
 

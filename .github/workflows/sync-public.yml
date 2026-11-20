@@ -1,0 +1,62 @@
+# 非公開の正本から公開ミラーへの一方通行の同期（2026-11-20 の会議 D-001・D-002・D-005）
+# - release-v* のタグを打ったときだけ動く
+# - leakscan の strict 検査（固有語リスト必須）が通らなければ、何も push せずに失敗する（Fail-Closed）
+# - 公開ミラーには、そのタグの中身を1コミットとして、プロジェクト共通の名義で積む（正本の履歴と author は出さない）
+#
+# 必要な設定（リポジトリの Settings → Secrets and variables → Actions）
+# - Secrets: LEAKSCAN_TERMS（固有語リスト）、PUBLIC_DEPLOY_KEY（公開ミラーにだけ書ける Deploy Key の秘密鍵）
+# - Variables: PUBLIC_MIRROR（例: owner/dartmouth。未設定なら失敗する）
+name: sync-public
+on:
+  push:
+    tags: ["release-v*"]
+permissions:
+  contents: read
+concurrency:
+  group: sync-public
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      AUTHOR_NAME: Dartmouth Experimenter
+      AUTHOR_EMAIL: nobody@users.noreply.github.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: strict leakscan（失敗したら同期しない）
+        run: python src/dartmouth/leakscan.py --require-terms
+        env:
+          LEAKSCAN_TERMS: ${{ secrets.LEAKSCAN_TERMS }}
+      - name: 設定の確認
+        env:
+          MIRROR: ${{ vars.PUBLIC_MIRROR }}
+          KEY: ${{ secrets.PUBLIC_DEPLOY_KEY }}
+        run: |
+          test -n "$MIRROR" || { echo "変数 PUBLIC_MIRROR がありません"; exit 1; }
+          test -n "$KEY" || { echo "Secret PUBLIC_DEPLOY_KEY がありません"; exit 1; }
+          test "$MIRROR" != "$GITHUB_REPOSITORY" || { echo "PUBLIC_MIRROR が正本と同じです"; exit 1; }
+      - name: 公開ミラーへ push
+        env:
+          MIRROR: ${{ vars.PUBLIC_MIRROR }}
+          KEY: ${{ secrets.PUBLIC_DEPLOY_KEY }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes"
+          git clone --depth 1 "git@github.com:${MIRROR}.git" mirror || { mkdir mirror && git -C mirror init -q -b master && git -C mirror remote add origin "git@github.com:${MIRROR}.git"; }
+          # タグの中身で置き換える（.git は残す）
+          find mirror -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          git archive "$TAG" | tar -x -C mirror
+          rm -rf mirror/.github/workflows   # 公開ミラーでは CI を動かさない（Secrets を置かない展示用）
+          cd mirror
+          git add -A
+          if git diff --cached --quiet; then echo "変更なし"; exit 0; fi
+          git -c user.name="$AUTHOR_NAME" -c user.email="$AUTHOR_EMAIL" commit -q -m "Release ${TAG}"
+          git tag "$TAG"
+          git push origin HEAD:master "refs/tags/${TAG}"

@@ -23,6 +23,8 @@ from typing import Any, Callable
 
 from ..adapters.base import Adapter, Reply, TurnContext
 from ..config import Config, TopicConfig
+from ..persona_lint import TEMPLATE
+from ..persona_output import normalize_reply
 from ..storage.minutes import PROPOSAL_SCHEMA, Minutes, Proposal
 from . import events as E
 from .budget import Budget
@@ -1131,6 +1133,12 @@ class Engine:
                 if reply is not None:
                     # 議長のまとめ（JSON・総括）は議論の発言ではないので文字数上限をかけない
                     text, cut = (reply.text.strip(), False) if round_ == "summary" else self.budget.truncate(reply.text.strip())
+                    format_violation = None
+                    context_text = text
+                    persona_meta, _ = self.persona_lib.get(name, ({}, ""))
+                    if round_ in ("independent", "critique") and persona_meta.get("template") == TEMPLATE:
+                        context_text, repaired = normalize_reply(text)
+                        format_violation = repaired or None
                     # 議題前に始めた /ask の回答が、待っている間に始まった議題に入るようにする
                     target = cur if cur is not None else (self.cur if round_ == "interjection" else None)
                     rec_topic = target.no if target is not None else None
@@ -1139,9 +1147,10 @@ class Engine:
                     self._record(round_, name, "message", text, topic=rec_topic, elapsed_ms=elapsed, tokens=reply.tokens,
                                  call=True, truncated=cut or None, to="user" if to_user else None,
                                  prompt_chars=len(prompt), prompt_parts=dict(getattr(self.ctx, "last_parts", {}) or {}),
-                                 attempt=attempt + 1, **usage)
+                                 attempt=attempt + 1, format_violation=format_violation,
+                                 context_text=context_text if format_violation else None, **usage)
                     if round_ not in ("intro", "summary", "plan"):  # 自己紹介と席決めは議題の文脈に入れない
-                        (target.messages if target is not None else self._pre_topic).append(Message(name, round_, text, self.seq))
+                        (target.messages if target is not None else self._pre_topic).append(Message(name, round_, context_text, self.seq))
                         if target is not None:
                             await self._handle_requests(target, name, text)
                     self.bus.publish(E.SPEECH_END, participant=name, round=round_, topic=topic_no, status="ok", text=text, elapsed_ms=elapsed)
@@ -1431,7 +1440,7 @@ class Engine:
             if r.get("kind") != "message" or r.get("round") in ("summary", "intro"):
                 continue
             to = r.get("to") if r.get("to") != "user" else None
-            m = Message(r["speaker"], r["round"], r["text"], r["seq"], to=to)
+            m = Message(r["speaker"], r["round"], r.get("context_text") or r["text"], r["seq"], to=to)
             if r.get("topic") is None:
                 if r.get("round") == "interjection":
                     pre.append(m)
