@@ -264,6 +264,8 @@ class Session:
     def prompt(self, persona: str, instruction: str, history: str = "") -> str:
         return (
             f"{persona}\n\n議題\n{self.topic.prompt}\n\n{history}\n\n{instruction}\n"
+            # 道具（コマンド・ファイル・検索）を使わせない。agy は画面のないモードで道具を自動拒否し、空の応答で止まるため
+            "道具（コマンドの実行・ファイルの読み書き・検索）は使わず、この文面だけをもとに文章で答えてください。\n"
             f"【結論】【根拠】【未決】をこの順で使い、全体を{self.settings.max_chars}字以内に収めてください。"
         )
 
