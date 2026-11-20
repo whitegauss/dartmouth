@@ -45,7 +45,8 @@ def validate_output(text: str, max_chars: int = 400, forbidden: tuple[str, ...] 
             )
         ):
             return extracted, True
-    return text[:400] + "\n" + FALLBACK, True
+    # 復元できないときは字数の上限で切る（D-013 の「先頭400字」は上限400字のときの決め方。上限を変えたら上限で切る）
+    return text[:max_chars] + "\n" + FALLBACK, True
 
 
 def write_review(csv_path: Path, artifacts: Path, destination: Path) -> None:

@@ -102,3 +102,13 @@ def test_validation_and_redaction():
     for invalid in ("[同意] @seat D-1", "【未決】なし", VALID + "\n禁止", VALID + "長" * 400):
         assert validate_output(invalid, forbidden=("禁止",))[0].endswith(FALLBACK)
     assert sanitize("sk-" + "x" * 24, MODEL_PATTERN) == "[REDACTED]"
+
+
+def test_fallback_cuts_at_configured_limit():
+    from experiments.validate_output import FALLBACK, validate_output
+
+    long = "【結論】" + "あ" * 900 + "\n【根拠】い\n【未決】う"
+    out, bad = validate_output(long, max_chars=800)
+    assert bad and out.endswith(FALLBACK) and len(out) == 800 + 1 + len(FALLBACK)
+    out, bad = validate_output(long, max_chars=400)
+    assert len(out) == 400 + 1 + len(FALLBACK)
