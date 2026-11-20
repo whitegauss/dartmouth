@@ -138,9 +138,10 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     def _load(path: str, agents_path: str | None = None, chair: str | None = None, effort: str | None = None):
+        from .agenda import split_ref
         from .config import apply_chair_override
 
-        p = Path(path)
+        p = split_ref(path)[0]  # 「議題.yaml#案件id」は、ファイルの部分で確かめる
         if not p.exists():
             hint = "dm init でひな形を作るか、" if path == "config.yaml" else ""
             raise SystemExit(f"設定ファイル {path} がありません。{hint}-c で設定ファイルを指定してください"

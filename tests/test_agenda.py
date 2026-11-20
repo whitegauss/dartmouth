@@ -179,3 +179,20 @@ def test_chair_bundles_open_items_into_topics_and_caches(tmp_path, monkeypatch):
         # 未解決事項が片付くと、前の提案は使わない
         c.post(f"/api/ledger/item/{t['item_ids'][0]}/status", json={"status": "done"})
         assert c.get("/api/agenda/proposal?project=life").json()["proposal"] is None
+
+
+def test_cli_run_accepts_agenda_project_ref(tmp_path, monkeypatch):
+    """dm run -c 議題.yaml#案件id: ファイルの存在確認で「#案件id」付きを弾かない（agents.yaml は同じフォルダから探す）。"""
+    import pytest
+
+    from dartmouth import cli
+
+    p = tmp_path / "agenda.yaml"
+    p.write_text(AGENDA, encoding="utf-8")
+    (tmp_path / "agents.yaml").write_text(yaml.safe_dump({"participants": {
+        "chair": {"adapter": "dummy", "role": "chair"}, "a": {"adapter": "dummy", "role": "member"}}}), encoding="utf-8")
+    seen = {}
+    monkeypatch.setattr("dartmouth.session.create_session", lambda cfg, *a, **k: seen.setdefault("cfg", cfg) and (_ for _ in ()).throw(SystemExit(0)))
+    with pytest.raises(SystemExit):
+        cli.main(["run", "-c", f"{p}#life", "--headless"])
+    assert seen["cfg"].meeting.project == "life"
