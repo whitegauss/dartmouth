@@ -199,3 +199,15 @@ def test_meeting_lock_blocks_second_process(tmp_path):
     a.release()
     assert not is_locked(tmp_path)
     MeetingLock(tmp_path).acquire().release()
+
+
+def test_chair_override_neon(tmp_path):
+    from dartmouth.config import apply_chair_override
+
+    (tmp_path / "c.yaml").write_text("participants:\n  chair: {adapter: claude_code, model: opus, role: chair}\n", encoding="utf-8")
+    cfg = apply_chair_override(load_config(tmp_path / "c.yaml"), chair="neon", effort="high")
+    ch = cfg.participants["chair"]
+    assert ch.adapter == "antigravity_cli" and ch.options()["model"] == "gemini-4-neon-high" and ch.display_name == "議長(Neon)"
+    # effort だけ変えるときは、今の Neon のまま
+    cfg = apply_chair_override(cfg, effort="low")
+    assert cfg.participants["chair"].options()["model"] == "gemini-4-neon-low"

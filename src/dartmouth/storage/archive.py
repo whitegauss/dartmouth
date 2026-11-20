@@ -443,8 +443,9 @@ def window_usage(dirs: Iterable[Path], hours: float = 5, now: datetime | None = 
 
 def _scorer_key(model: str, adapter: str) -> str:
     ml = (model or "").lower()
-    if "argon" in ml:
-        return "argon"
+    for g in ("neon", "argon"):
+        if g in ml:
+            return g
     if "opus" in ml or adapter == "claude_code":
         return "opus"
     return model or adapter or "other"
@@ -509,6 +510,8 @@ def seat_history(dirs: Iterable[Path]) -> dict[str, dict[str, Any]]:
         h["opus_rated"] = (by_chair.get("opus") or {}).get("rated", 0)
         h["argon_avg_score"] = (by_chair.get("argon") or {}).get("avg_score")
         h["argon_rated"] = (by_chair.get("argon") or {}).get("rated", 0)
+        h["neon_avg_score"] = (by_chair.get("neon") or {}).get("avg_score")
+        h["neon_rated"] = (by_chair.get("neon") or {}).get("rated", 0)
         h["tokens_per_call"] = round(h["tokens"] / h["calls"]) if h["calls"] else None
         del h["scores"]
         del h["scores_by_chair"]

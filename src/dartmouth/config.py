@@ -384,8 +384,13 @@ def load_config(path: str | Path, agents_path: str | Path | None = None) -> Conf
     return cfg
 
 
+# 議長に選べるモデル。Gemini 系は agy（Antigravity CLI）の gemini-4-<名前>-<effort>
+GEMINI_CHAIRS = ("neon", "argon")
+CHAIRS = (*GEMINI_CHAIRS, "opus")
+
+
 def apply_chair_override(cfg: Config, chair: str | None = None, effort: str | None = None) -> Config:
-    """議長モデル（argon / opus）と effort（low / medium / high）を明示指定で上書きする。"""
+    """議長モデル（neon / argon / opus）と effort（low / medium / high）を明示指定で上書きする。"""
     if not chair and not effort:
         return cfg
     cid = cfg.chair
@@ -394,18 +399,19 @@ def apply_chair_override(cfg: Config, chair: str | None = None, effort: str | No
     eff = effort or opts.get("effort")
     if not eff:
         m = str(opts.get("model") or "")
-        eff = m.rsplit("-", 1)[-1] if m.startswith("gemini-4-argon-") else "medium"
+        eff = m.rsplit("-", 1)[-1] if any(m.startswith(f"gemini-4-{g}-") for g in GEMINI_CHAIRS) else "medium"
     if eff not in ("low", "medium", "high"):
         eff = "medium"
 
     target = chair
     if target is None:
-        target = "opus" if cur.adapter == "claude_code" else ("argon" if "argon" in str(opts.get("model") or "") else None)
-    if target == "argon":
+        model = str(opts.get("model") or "")
+        target = "opus" if cur.adapter == "claude_code" else next((g for g in GEMINI_CHAIRS if g in model), None)
+    if target in GEMINI_CHAIRS:
         new_opts = {k: v for k, v in opts.items() if k not in ("effort",)}
-        new_opts["model"] = f"gemini-4-argon-{eff}"
+        new_opts["model"] = f"gemini-4-{target}-{eff}"
         data = cur.model_dump(exclude_none=True)
-        data.update(adapter="antigravity_cli", display_name="議長(Argon)", **new_opts)
+        data.update(adapter="antigravity_cli", display_name=f"議長({target.capitalize()})", **new_opts)
         cfg.participants[cid] = ParticipantConfig.model_validate(data)
     elif target == "opus":
         new_opts = dict(opts)

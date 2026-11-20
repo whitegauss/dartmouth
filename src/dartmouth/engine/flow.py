@@ -1042,7 +1042,7 @@ class Engine:
             from ..adapters import create_adapter
             from ..config import apply_chair_override
 
-            target = "opus" if p.adapter in ("antigravity_cli", "gemini_api") else ("argon" if p.adapter == "claude_code" else None)
+            target = "opus" if p.adapter in ("antigravity_cli", "gemini_api") else ("neon" if p.adapter == "claude_code" else None)
             if not target:
                 return False
             apply_chair_override(self.cfg, chair=target)

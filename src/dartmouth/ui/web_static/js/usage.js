@@ -105,8 +105,8 @@ async function loadUsage() {
   const seats = u.seats || [];
   const scoreCell = (avg, n) => avg == null ? "—" : `<span class="pill ${avg >= 4 ? "ok" : avg < 3 ? "bad" : ""}">${avg}</span>${n != null ? ` <span class="muted">(${n})</span>` : ""}`;
   $("seatTable").innerHTML = seats.length
-    ? `<tr><th>ペルソナ</th><th>経路</th><th>モデル</th><th>座った</th><th>採点</th><th>Opus</th><th>Argon</th><th>採点数</th><th>トークン/回</th></tr>` + seats.map(h => `<tr><td>${esc(h.name)}</td><td>${esc(h.backend)}</td><td>${esc(h.model || "")}</td>
-      <td class="num">${h.seated}</td><td class="num">${scoreCell(h.avg_score)}</td><td class="num">${scoreCell(h.opus_avg_score, h.opus_avg_score == null ? null : h.opus_rated)}</td><td class="num">${scoreCell(h.argon_avg_score, h.argon_avg_score == null ? null : h.argon_rated)}</td><td class="num">${h.rated}</td><td class="num">${h.tokens_per_call == null ? "—" : nf.format(h.tokens_per_call)}</td></tr>`).join("")
+    ? `<tr><th>ペルソナ</th><th>経路</th><th>モデル</th><th>座った</th><th>採点</th><th>Neon</th><th>Opus</th><th>Argon</th><th>採点数</th><th>トークン/回</th></tr>` + seats.map(h => `<tr><td>${esc(h.name)}</td><td>${esc(h.backend)}</td><td>${esc(h.model || "")}</td>
+      <td class="num">${h.seated}</td><td class="num">${scoreCell(h.avg_score)}</td><td class="num">${scoreCell(h.neon_avg_score, h.neon_avg_score == null ? null : h.neon_rated)}</td><td class="num">${scoreCell(h.opus_avg_score, h.opus_avg_score == null ? null : h.opus_rated)}</td><td class="num">${scoreCell(h.argon_avg_score, h.argon_avg_score == null ? null : h.argon_rated)}</td><td class="num">${h.rated}</td><td class="num">${h.tokens_per_call == null ? "—" : nf.format(h.tokens_per_call)}</td></tr>`).join("")
     : '<tr><td class="muted">まだありません（議長が席を決める会議を回すと貯まります）</td></tr>';
 }
 

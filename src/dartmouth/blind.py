@@ -21,9 +21,9 @@ VERSION = "1"
 # モデル・経路を示す語（大文字小文字は区別しない）
 MODEL_TERMS = [
     "claude", "opus", "sonnet", "haiku", "anthropic",
-    "gemini", "argon", "hydrogen", "flash", "agy",
+    "gemini", "neon", "argon", "hydrogen", "flash", "agy",
     "chatgpt", "openai", "codex", "gpt", "gpt-oss", "o3", "o4-mini",
-    "クロード", "オーパス", "ソネット", "ハイク", "ジェミニ", "アルゴン", "ハイドロジェン", "フラッシュ",
+    "クロード", "オーパス", "ソネット", "ハイク", "ジェミニ", "ネオン", "アルゴン", "ハイドロジェン", "フラッシュ",
 ]
 EFFORT_TERMS = ["high effort", "low effort", "medium effort", "effort", "xhigh", "high", "medium", "low",
                 "高エフォート", "低エフォート", "中エフォート", "エフォート"]

@@ -442,7 +442,7 @@ class StartIn(BaseModel):
     config: int = 0  # Hub.configs の番号（互換用）
     config_path: str | None = None  # 画面で選んだ議題設定ファイル（一覧に出たものだけ受け付ける）
     agents_config_path: str | None = None  # 議長・配役設定ファイル（別指定する場合）
-    chair: str | None = None  # "argon" | "opus"
+    chair: str | None = None  # "neon" | "argon" | "opus"
     chair_effort: str | None = None  # "low" | "medium" | "high"
     name: str = Field(default="", max_length=200)
     purpose: str = Field(default="", max_length=20000)

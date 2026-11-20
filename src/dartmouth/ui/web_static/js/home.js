@@ -14,7 +14,7 @@ function syncTopicsWrap() { $("topicsWrap").classList.toggle("hidden", !$("topic
 let fromMeetings = new Set(), homeConfigs = [];
 function applyAgentsInfo() {
   const ag = homeConfigs.find(x => x.name === "agents.yaml") || homeConfigs.find(x => x.has_agents);
-  const cm = $("chairModel").value === "opus" ? "Opus (Claude)" : "Argon (Gemini 4)";
+  const cm = $("chairModel").selectedOptions[0]?.textContent || $("chairModel").value;
   const ce = $("chairEffort").value;
   const parts = [`議長: ${cm} / effort=${ce}`];
   if (ag && ag.backends && ag.backends.length) parts.push(`配役候補: ${ag.backends.join(", ")}`);

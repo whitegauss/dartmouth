@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> None:
     run = sub.add_parser("run", help="会議を開始する")
     run.add_argument("-c", "--config", default="config.yaml", help="議題・会議設定の YAML（既定: config.yaml）")
     run.add_argument("-a", "--agents", default=None, help="議長・配役・バックエンド設定の YAML（別指定する場合）")
-    run.add_argument("--chair", choices=["argon", "opus"], default=None, help="議長モデルを明示指定（argon または opus）")
+    run.add_argument("--chair", choices=["neon", "argon", "opus"], default=None, help="議長モデルを明示指定（neon / argon / opus）")
     run.add_argument("--chair-effort", choices=["low", "medium", "high"], default=None, help="議長の推論 effort（low / medium / high）")
     run.add_argument("--group", default=None, help="議題グループ名で絞って実行する（topic.group）")
     run.add_argument("--ui", choices=["tui", "plain", "web"], default="tui")
@@ -292,12 +292,13 @@ def main(argv: list[str] | None = None) -> None:
         if args.seats:
             dirs = sorted({Path(d).resolve().parent for d in args.meeting_dirs})
             hist = sorted(seat_history(dirs).values(), key=lambda h: (h["persona"], -(h["avg_score"] or 0)))
-            print(f"{'ペルソナ':16} {'経路':12} {'モデル':28} {'座った':>4} {'採点':>5} {'Opus':>8} {'Argon':>8} {'採点数':>4} {'トークン/回':>10}")
+            print(f"{'ペルソナ':16} {'経路':12} {'モデル':28} {'座った':>4} {'採点':>5} {'Neon':>8} {'Opus':>8} {'Argon':>8} {'採点数':>4} {'トークン/回':>10}")
             for h in hist:
                 op = f"{h['opus_avg_score']}({h['opus_rated']})" if h.get("opus_avg_score") is not None else "—"
                 ar = f"{h['argon_avg_score']}({h['argon_rated']})" if h.get("argon_avg_score") is not None else "—"
+                ne = f"{h['neon_avg_score']}({h['neon_rated']})" if h.get("neon_avg_score") is not None else "—"
                 print(f"{h['name'][:16]:16} {h['backend'][:12]:12} {str(h['model'] or '')[:28]:28} {h['seated']:>4} "
-                      f"{h['avg_score'] if h['avg_score'] is not None else '—':>5} {op:>8} {ar:>8} {h['rated']:>4} {h['tokens_per_call'] or '—':>10}")
+                      f"{h['avg_score'] if h['avg_score'] is not None else '—':>5} {ne:>8} {op:>8} {ar:>8} {h['rated']:>4} {h['tokens_per_call'] or '—':>10}")
             return
 
         all_rows, totals = [], []
