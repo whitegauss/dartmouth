@@ -222,7 +222,7 @@ def test_resolve_config_path_single_route(tmp_path, monkeypatch):
     (tmp_path / "config.yaml").write_text("participants: {}\n", encoding="utf-8")
     with pytest.raises(SystemExit) as e:
         resolve_config_path(None)
-    assert "cp config.example.yaml config.local.yaml" in str(e.value.code) and "dm init" in str(e.value.code)
+    assert "config.local.yaml" in str(e.value.code) and "dm init" in str(e.value.code)
     # ./config.local.yaml を読む
     (tmp_path / "config.local.yaml").write_text("participants: {}\n", encoding="utf-8")
     assert resolve_config_path(None) == Path("config.local.yaml")

@@ -170,8 +170,6 @@ gh secret set LEAKSCAN_TERMS < ~/dartmouth-personal/leak_terms.txt   # strict sc
 
 CI runs the generic scan on every push and PR, and the strict scan on pushes to `master` and PRs from this repository; the strict job fails if the secret is missing instead of skipping. Locally, `--strict --allow-missing-secrets` downgrades a missing list to a warning.
 
-Releases go to a separate public mirror: pushing a `release-v*` tag runs `.github/workflows/sync-public.yml`, which assembles the published tree (the repository without CI files, plus `.github/public/`: an example `config.example.yaml` and two synthetic sample meetings), runs the strict scan and `dm release-audit` (12 checks in 4 layers, see [docs/release-checklist.md](docs/release-checklist.md)), and only then pushes one commit under a project author. Manual sign-off: [docs/release-signoff.md](docs/release-signoff.md).
-
 ## License
 
 [MIT](LICENSE)

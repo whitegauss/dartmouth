@@ -383,7 +383,6 @@ def resolve_config_path(explicit: str | Path | None = None) -> Path:
         return Path(LOCAL_CONFIG)
     raise SystemExit(
         "設定ファイルがありません。次のどれかで用意してください（DARTMOUTH_CONFIG ＞ ./config.local.yaml の順に読みます）:\n"
-        f"  cp config.example.yaml {LOCAL_CONFIG}    # 公開リポジトリの見本から\n"
         f"  dm init                                  # ひな形（examples/dummy.yaml）から {LOCAL_CONFIG} を作る\n"
         "  export DARTMOUTH_CONFIG=/path/to/config.yaml")
 

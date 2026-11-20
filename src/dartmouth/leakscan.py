@@ -131,7 +131,7 @@ def run(files: list[tuple[str, str]], terms_text: str, require_terms: bool, max_
         if not allow_missing:
             print("leakscan: 固有語リストがありません（LEAKSCAN_TERMS か --terms）。--strict のため失敗にします", file=out)
             return 2
-        # ローカル開発だけの逃げ道（Q-003）。CI では使わない（sync-public / leakscan.yml は失敗で止める）
+        # ローカル開発だけの逃げ道（Q-003）。CI では使わない（leakscan.yml は失敗で止める）
         print("leakscan: 警告: 固有語リストがないため、汎用パターンだけで調べます（--allow-missing-secrets）", file=out)
     rules = PATTERNS + terms
     hits, ignored = [], 0

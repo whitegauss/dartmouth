@@ -123,11 +123,6 @@ def main(argv: list[str] | None = None) -> None:
     leak.add_argument("--require-terms", "--strict", dest="require_terms", action="store_true", help="固有語リストがなければ失敗にする")
     leak.add_argument("--allow-missing-secrets", action="store_true", help="--strict でも固有語リストがなければ警告だけで続ける（ローカル用）")
     leak.add_argument("--max-ignores", type=int, default=5, help="leakscan:ignore の上限（既定5）")
-    ra = sub.add_parser("release-audit", help="公開ミラーに置く形のツリーを4層12項目で監査する（機械判定10項目。✗ があれば終了コード1）")
-    ra.add_argument("--tag", help="リリースのタグ名")
-    ra.add_argument("--worktree", action="store_true", help="コミット前の作業ツリーから組む")
-    ra.add_argument("--strict", action="store_true", help="固有語リストがなければ ✗")
-    ra.add_argument("--allow-missing-secrets", action="store_true", help="--strict でも固有語リストがなければ警告だけ（ローカル用）")
     blind = sub.add_parser("blind", help="議事録からモデル名・ペルソナ名・条件名を伏せる（残れば終了コード1）")
     blind.add_argument("target", help="会議のディレクトリ（minutes.md を使う）か、議事録のファイル")
     blind.add_argument("-o", "--output", help="書き出し先（省略時は標準出力）")
@@ -392,17 +387,6 @@ def main(argv: list[str] | None = None) -> None:
             + (["--require-terms"] if args.require_terms else []) + (["--allow-missing-secrets"] if args.allow_missing_secrets else []) \
             + ["--max-ignores", str(args.max_ignores)]
         raise SystemExit(leakscan(argv))
-    if args.command == "release-audit":
-        import os
-
-        from .paths import personal_dir
-        from .release_audit import main as release_audit
-
-        argv = (["--tag", args.tag] if args.tag else []) + (["--worktree"] if args.worktree else []) \
-            + (["--strict"] if args.strict else []) + (["--allow-missing-secrets"] if args.allow_missing_secrets else [])
-        if not os.environ.get("LEAKSCAN_TERMS") and (personal_dir() / "leak_terms.txt").exists():
-            argv += ["--terms", str(personal_dir() / "leak_terms.txt")]
-        raise SystemExit(release_audit(argv))
     if args.command == "blind":
         from .blind import run as run_blind
 
