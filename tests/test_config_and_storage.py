@@ -12,14 +12,15 @@ from dartmouth.storage.minutes import Minutes, Proposal
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_example_config_loads():
-    cfg = load_config(ROOT / "config.example.yaml")
-    assert cfg.chair == "chair"
-    assert cfg.participants["gemini"].share_scope == "public_only" and cfg.participants["gemini"].adapter == "gemini_api"
-    assert cfg.participants["gemini"].failure_policy() == "skip"
-    assert cfg.participants["chair"].failure_policy() == "pause"
-    assert cfg.participants["chair"].options() == {"model": "opus", "tools": []}
-    assert cfg.meeting.chair_participates is False and cfg.meeting.critique_rounds == 2
+def test_init_writes_loadable_config(tmp_path):
+    from dartmouth.session import copy_example_config
+
+    dest = tmp_path / "config.yaml"
+    copy_example_config(dest)
+    text = dest.read_text(encoding="utf-8")
+    assert "meetings_dir:" not in text and "prompts_dir:" not in text
+    cfg = load_config(dest)
+    assert cfg.participants and cfg.meeting.topics
 
 
 def test_adapter_from_file_path(tmp_path):

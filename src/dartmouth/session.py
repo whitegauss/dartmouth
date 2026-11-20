@@ -342,5 +342,10 @@ def export_meeting(d: str | Path) -> Path:
 
 
 def copy_example_config(dest: Path) -> None:
-    src = Path(__file__).resolve().parents[2] / "config.example.yaml"
-    shutil.copy(src, dest)
+    """examples/dummy.yaml をひな形として config.yaml に書く。置き場所が変わるので、相対パスの行は外す。"""
+    src = Path(__file__).resolve().parents[2] / "examples" / "dummy.yaml"
+    lines = [ln for ln in src.read_text(encoding="utf-8").splitlines()
+             if not ln.startswith(("meetings_dir:", "prompts_dir:"))]
+    head = ["# dm init で作ったひな形（examples/dummy.yaml）。adapter: dummy を claude_code / antigravity_cli などに置き換える",
+            "# 書き方: docs/configuration.md"]
+    dest.write_text("\n".join(head + lines) + "\n", encoding="utf-8")

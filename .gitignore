@@ -11,7 +11,7 @@ meetings/*
 !meetings/.gitkeep
 # 個人の会議資料（個人用の会議設定は local/ か *.local.yaml に置く）
 context/
-# 各自の設定（config.example.yaml / agents.example.yaml をコピーして使う）
+# 各自の設定（dm init で作る。個人用ディレクトリに置いてもよい）
 config.yaml
 agents.yaml
 # 個人用のファイルはここに置けば公開されない（あとで個人用と開発用を分けるときの置き場）

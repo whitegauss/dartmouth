@@ -50,8 +50,8 @@ function renderPicker() {
   const list = projectConfigs();
   for (const x of list) if (x.project) loadProposal(x);
   const hasTopics = (x) => (x.topics || []).length || (x.project && prop.data[x.project] && prop.data[x.project].topics.length);
-  // 選択中の案件を先頭に。議題のない案件は、議長に作ってもらうボタンだけの1行にする
-  const full = list.filter(hasTopics).sort((a, b) => (b === c) - (a === c));
+  // 並びは固定（選んでも動かさない）。議題のない案件は、議長に作ってもらうボタンだけの1行にする
+  const full = list.filter(hasTopics);
   for (const x of full) box.appendChild(projectSection(x, x === c));
   const empty = list.filter(x => !hasTopics(x) && x.project && (prop.open[x.project] || prop.running.has(x.project)));
   for (const x of empty) box.appendChild(projectSection(x, false));
@@ -69,7 +69,20 @@ function projectSection(c, isCur) {
   const sec = document.createElement("div");
   const h = document.createElement("div"); h.className = "pkg";
   h.innerHTML = `<span>${esc(cfgName(c))}${c.theme ? ` <span class="muted" style="font-weight:400">${esc(c.theme)}</span>` : ""}</span>`;
-  if (c.project) h.appendChild(propControl(c));
+  const acts = document.createElement("span"); acts.className = "row"; acts.style.cssText = "gap:6px;align-items:center;font-weight:400";
+  if (c.project) acts.appendChild(propControl(c));
+  const all = projectTopics(c);
+  if (all.length) {
+    const allOn = isCur && all.every(t => t.on());
+    const sel = Object.assign(document.createElement("button"), {type: "button", className: "small", textContent: allOn ? "選択を外す" : "全部選ぶ"});
+    sel.onclick = (e) => { e.stopPropagation(); useProject(c); all.forEach(t => t.set(!allOn)); renderPicker(); };
+    const go = Object.assign(document.createElement("button"), {type: "button", className: "small primary", textContent: `${all.length} 件まとめて始める →`,
+      title: "この案件の議題（議長の提案と議題ファイル）を全部選んで、すぐ会議を始める"});
+    go.onclick = (e) => { e.stopPropagation(); useProject(c); all.forEach(t => t.set(true)); renderPicker();
+      startMeeting(all.map(t => t.topic())); };
+    acts.append(sel, go);
+  }
+  h.appendChild(acts);
   sec.appendChild(h);
   const d = c.project && prop.data[c.project];
   for (const t of (d ? d.topics : [])) sec.appendChild(propCard(c, t));
@@ -83,6 +96,15 @@ function projectSection(c, isCur) {
   for (const t of c.topics || []) sec.appendChild(pkCard(c, t, seen && !seen.has(t.title)));
   pk.seen.set(c.path, new Set((c.topics || []).map(t => t.title)));
   return sec;
+}
+/* 案件の議題（議長の提案＋議題ファイル）を、選択の読み書きつきで並べる */
+function projectTopics(c) {
+  const d = c.project && prop.data[c.project];
+  const fromProp = (d ? d.topics : []).map(t => ({on: () => prop.on.has(propKey(c, t)),
+    set: (v) => v ? prop.on.add(propKey(c, t)) : prop.on.delete(propKey(c, t)), topic: () => ({title: t.title, premise: t.premise})}));
+  const fromFile = (c.topics || []).map(t => { const st = pkState(c, t);
+    return {on: () => st.on, set: (v) => { st.on = v; }, topic: () => ({title: st.title ?? t.title, premise: st.premise ?? t.premise ?? ""})}; });
+  return [...fromProp, ...fromFile];
 }
 function pkCard(c, t, isNew) {
   const st = pkState(c, t);
@@ -438,8 +460,8 @@ $("qaApplyBtn").onclick = () => {
   $("qaRows").innerHTML = "";
   toast(`${pairs.length}件の回答を議題の前提に反映しました`, "ok");
 };
-$("startBtn").onclick = async () => {
-  const topics = [...pickedTopics(), ...manualTopics()];
+$("startBtn").onclick = () => startMeeting([...pickedTopics(), ...manualTopics()]);
+async function startMeeting(topics) {
   const c = curCfg();
   const ag = homeConfigs.find(x => x.name === "agents.yaml");
   if (!topics.length) { toast("議題を選んでください", "warning"); return; }
@@ -451,7 +473,7 @@ $("startBtn").onclick = async () => {
     clearPicks(); left.items = {}; if (c && c.project) { delete prop.data[c.project]; delete prop.at[c.project]; }
     mode = null; await refresh(true);
   } catch (e) { toast(e.message, "error"); } finally { $("startBtn").disabled = false; }
-};
+}
 /* 終わった会議を、こちらの指示で延長する（議題を選び、議論してほしいことを書く） */
 async function extendForm(box, id) {
   box.innerHTML = "";

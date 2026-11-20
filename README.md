@@ -41,9 +41,8 @@ This runs a full two-topic meeting with dummy agents (canned answers, random del
 ## Your first real meeting
 
 ```sh
-dm init                 # copies config.example.yaml to config.yaml
-$EDITOR config.yaml     # set the purpose, topics and participants
-cp agents.example.yaml agents.yaml   # shared chair / seating / backends for agenda files (or put it in ~/dartmouth-personal)
+dm init                 # writes config.yaml from examples/dummy.yaml
+$EDITOR config.yaml     # set the purpose, topics and participants (replace adapter: dummy with real ones)
 dm run                  # TUI
 dm run --ui plain       # plain stdin/stdout
 dm run --ui web         # Web UI (prints URLs with an access token)

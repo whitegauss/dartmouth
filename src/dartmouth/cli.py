@@ -123,7 +123,7 @@ def main(argv: list[str] | None = None) -> None:
 
     add_ledger_parser(sub)
 
-    init = sub.add_parser("init", help="config.example.yaml を config.yaml としてコピーする")
+    init = sub.add_parser("init", help="examples/dummy.yaml をひな形にして config.yaml を作る")
     init.add_argument("dest", nargs="?", default="config.yaml")
 
 
@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> None:
 
         p = Path(path)
         if not p.exists():
-            hint = "dm init で config.example.yaml から作るか、" if path == "config.yaml" else ""
+            hint = "dm init でひな形を作るか、" if path == "config.yaml" else ""
             raise SystemExit(f"設定ファイル {path} がありません。{hint}-c で設定ファイルを指定してください"
                              "（例: dm run -c examples/dummy.yaml --ui web）")
         if agents_path and not Path(agents_path).exists():
