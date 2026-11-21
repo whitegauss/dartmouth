@@ -20,6 +20,8 @@ When a meeting starts, the resolved config is copied into the meeting directory 
 | `auto_advance` | `true` | `false`: wait for `/next` after every round |
 | `agent_tools` | `true` | `false`: agents get no tools and no working directory; use with `knowledge` |
 | `tools` | none | One-line switch: `off` (no tools) or `read_only`. Overrides `agent_tools` when set |
+| `research` | `off` | `chair`: before the independent answers of each topic, the chair searches the web for facts the materials lack and posts a memo with sources that every seat sees. Works even with `tools: off` (only the chair, only web search, no files) |
+| `research_max_chars` | `3000` | Length limit of the chair's research memo |
 | `approval` | `human` | `auto`: approve the chair's summaries automatically; withdraw decisions later if needed |
 | `extensions` | `true` | Let the chair request an extension for a topic that needs more discussion (see below) |
 | `max_extensions` | `2` | Extensions per meeting |

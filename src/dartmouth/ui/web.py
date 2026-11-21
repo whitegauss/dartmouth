@@ -347,7 +347,7 @@ def meeting_summary(d: Path) -> dict[str, Any]:
 
 
 HIDDEN_EVENTS = {"stats"}
-DIVIDER_PHASES = {"independent": "独立回答", "critique": "相互批判", "summary": "議長のまとめ"}
+DIVIDER_PHASES = {"research": "議長の事前調査", "independent": "独立回答", "critique": "相互批判", "summary": "議長のまとめ"}
 
 
 def _proposal_from_text(text: str) -> Proposal | None:

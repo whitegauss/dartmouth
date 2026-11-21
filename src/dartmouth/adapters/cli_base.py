@@ -58,6 +58,8 @@ class CLIAdapter(Adapter):
         時間とトークンが数倍になる。既定では、調べる必要がある独立回答と /ask だけで使わせ、
         相互批判とまとめ（議論の中身だけで足りる）では使わせない。options.tools_rounds で変えられる。
         """
+        if ctx.round == "research":
+            return True  # 議長の事前調査は Web 検索のためのラウンド（会議の tools: off とは別に使わせる）
         rounds = self.options.get("tools_rounds", ["independent", "interjection"])
         return ctx.round in rounds
 
@@ -68,7 +70,8 @@ class CLIAdapter(Adapter):
         回答や非公開情報の原文がある）や非公開資料を、エージェントが読みに行けないようにする。
         読ませたい資料があるときだけ options.cwd で明示する。
         """
-        if self.options.get("cwd") and (ctx is None or self.tools_enabled(ctx)):
+        # 事前調査では作業ディレクトリ（コード）を渡さない。調べるのは Web だけ
+        if self.options.get("cwd") and (ctx is None or (self.tools_enabled(ctx) and ctx.round != "research")):
             return str(Path(self.options["cwd"]).expanduser())
         d = Path(tempfile.gettempdir()) / f"dartmouth-{os.getuid()}" / self.name
         d.mkdir(parents=True, exist_ok=True)

@@ -94,15 +94,18 @@ function patchHTML(el, html, secs) {
   if (el.dataset.key !== key) { el.innerHTML = html; el.dataset.key = key; return; }
   el.querySelectorAll(".secs").forEach(x => { const v = String(secs[x.dataset.n] ?? ""); if (x.textContent !== v) x.textContent = v; });
 }
-const PHASES = [["plan", "席決め"], ["independent", "独立回答"], ["critique", "相互批判"], ["summary", "まとめ"], ["approval", "承認"]];
+const PHASES = [["plan", "席決め"], ["research", "事前調査"], ["independent", "独立回答"], ["critique", "相互批判"], ["summary", "まとめ"], ["approval", "承認"]];
 function renderSide(st) {
   // 進行
   patchHTML($("topicLine"), st.topic_no
     ? `<small>議題 ${st.topic_no} / ${st.topics_total}</small>${esc(st.topic_title)}`
     : `<small>${esc(st.phase_label)}</small>${st.phase === "done" ? "会議は終わりました" : "議題を待っています"}`, {});
-  const order = PHASES.map(p => p[0]);
-  const curIdx = order.indexOf(st.phase === "topic" ? "plan" : st.phase);
-  patchHTML($("steps"), st.topic_no ? PHASES.map(([k, label], i) => {
+  // 事前調査の段は、議長の事前調査を使う会議でだけ出す（議題の開始中に議長が調べていれば「事前調査」）
+  const phases = st.research ? PHASES : PHASES.filter(p => p[0] !== "research");
+  const order = phases.map(p => p[0]);
+  const researching = Object.values(st.inflight || {}).some(f => f.round === "research");
+  const curIdx = order.indexOf(st.phase === "topic" ? (researching ? "research" : "plan") : st.phase);
+  patchHTML($("steps"), st.topic_no ? phases.map(([k, label], i) => {
     const cls = i < curIdx ? "done" : i === curIdx ? "now" : "";
     const extra = k === "critique" && st.critique_rounds ? ` ${Math.min(st.critique_done + (i === curIdx ? 1 : 0), st.critique_rounds)}/${st.critique_rounds}` : "";
     return `<div class="step ${cls}"><div class="bar"></div>${label}${extra}</div>`;

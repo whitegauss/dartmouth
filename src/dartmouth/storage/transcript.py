@@ -9,7 +9,7 @@ from typing import Any, Iterator
 
 from ..engine.events import RECORD, Event
 
-ROUNDS = ("intro", "plan", "independent", "critique", "summary", "approval", "interjection")
+ROUNDS = ("intro", "plan", "research", "independent", "critique", "summary", "approval", "interjection")
 KINDS = ("message", "error", "system")
 STATUSES = ("ok", "timeout", "failed", "skipped")
 

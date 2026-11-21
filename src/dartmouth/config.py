@@ -78,6 +78,10 @@ class MeetingConfig(BaseModel):
     agent_tools: bool = True
     # 道具の切り替えを1行で（off: 道具なし / read_only: 読み取り系の道具あり）。指定すると agent_tools より優先する
     tools: Literal["off", "read_only"] | None = None
+    # 事前調査。chair にすると、議題ごとに独立回答の前に議長が Web で調べ、出典つきの調査メモを全員に渡す。
+    # 資料にない事実（制度・料金・仕様・数値）に会議が弱いのを補う。tools: off でも議長の調査だけは Web 検索を使う
+    research: Literal["off", "chair"] = "off"
+    research_max_chars: int = 3000
 
     @field_validator("tools", mode="before")
     @classmethod

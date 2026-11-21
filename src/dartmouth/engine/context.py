@@ -157,7 +157,7 @@ class ContextBuilder:
             for m in messages:
                 who = "ユーザー" if m.speaker == "user" else self.names.get(m.speaker, m.speaker)
                 tag = {"independent": "独立回答", "critique": "相互批判", "interjection": "割り込み",
-                       "approval": "差し戻し", "summary": "議長まとめ"}.get(m.round, m.round)
+                       "approval": "差し戻し", "summary": "議長まとめ", "research": "議長の事前調査（Web）"}.get(m.round, m.round)
                 to = f" → {self.names.get(m.to, m.to)}" if m.to else ""
                 lines.append(f"## [{who}{to}]（{tag}）\n{clean(m.text.strip())}")
             sec.append("# この議題のこれまでの発言\n" + ("\n\n".join(lines) if lines else "（まだありません）"))
@@ -219,7 +219,7 @@ class ContextBuilder:
         p = self.cfg.participants[participant]
         opts = p.options()
         cwd = opts.get("cwd")
-        if not cwd or p.adapter not in ("claude_code", "antigravity_cli") or round_name is None:
+        if not cwd or p.adapter not in ("claude_code", "antigravity_cli") or round_name in (None, "research"):
             return []
         rounds = opts.get("tools_rounds", ["independent", "interjection"])
         if round_name in rounds:

@@ -20,6 +20,7 @@ from .base import AdapterError, Reply, TurnContext
 from .cli_base import CLIAdapter, parse_json_output, tail
 
 READ_ONLY_TOOLS = ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
+WEB_TOOLS = ["WebSearch", "WebFetch"]
 
 
 SYSTEM_PROMPT = "あなたは複数のAIが参加する会議の参加者です。ユーザーの指示に書かれた役割と形式に従って回答してください。"
@@ -33,7 +34,10 @@ class ClaudeCodeAdapter(CLIAdapter):
         self._sessions: set[str] = set()
 
     def build(self, ctx: TurnContext) -> tuple[list[str], str | None]:
-        tools = self.options.get("tools", READ_ONLY_TOOLS) if self.tools_enabled(ctx) else []
+        if ctx.round == "research":
+            tools = WEB_TOOLS  # 事前調査は Web だけ（ファイルは読ませない）
+        else:
+            tools = self.options.get("tools", READ_ONLY_TOOLS) if self.tools_enabled(ctx) else []
         tools_arg = ",".join(tools) if isinstance(tools, list) else str(tools)
         argv = [self.command, "-p", "--output-format", "json", "--tools", tools_arg, "--permission-mode", "dontAsk"]
         if tools_arg:

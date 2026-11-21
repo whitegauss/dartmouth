@@ -14,7 +14,7 @@ from ..engine import events as E
 from ..storage.minutes import Proposal
 
 PALETTE = ["#d97757", "#4f8ef7", "#3fb950", "#c678dd", "#e5c07b", "#56b6c2", "#e06c75"]
-ROUND_LABEL = {"intro": "自己紹介", "plan": "席決め", "independent": "独立回答", "critique": "相互批判", "summary": "まとめ",
+ROUND_LABEL = {"intro": "自己紹介", "plan": "席決め", "research": "事前調査", "independent": "独立回答", "critique": "相互批判", "summary": "まとめ",
                "approval": "承認", "interjection": "割り込み"}
 
 EDIT_HEADER = """\

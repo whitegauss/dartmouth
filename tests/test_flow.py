@@ -771,3 +771,47 @@ async def test_user_extension_without_handover_and_invalid_requests(tmp_path, ne
     s4 = new_session(make_config(tmp_path, topics=["議題X"]))
     with pytest.raises(ValueError):
         s4.engine.extend_after_done(1)
+
+
+async def test_chair_research_memo_reaches_independent_round(tmp_path, new_session):
+    cfg = make_config(tmp_path, {
+        "claude": {"adapter": "dummy", "role": "chair"},
+        "gemini": {"adapter": "dummy", "role": "researcher"},
+    }, topics=["議題A"], intro=False, research="chair", tools="off", chair_participates=False)
+    s = new_session(cfg)
+    d = await run_auto(s)
+    recs = d.records()
+    memo = [r for r in recs if r["kind"] == "message" and r["round"] == "research"]
+    assert [r["speaker"] for r in memo] == ["claude"] and memo[0]["topic"] == 1
+    # 調査メモは独立回答より前で、独立回答のプロンプトに入る（他の席の回答は入らない）
+    first_indep = next(i for i, r in enumerate(recs) if r["round"] == "independent" and r["kind"] == "message")
+    assert recs.index(memo[0]) < first_indep
+    research_call = [c for c in s.adapters["claude"].prompts if c.round == "research"][0]
+    assert "検索語に個人の情報を入れない" in research_call.prompt
+    indep = [c for c in s.adapters["gemini"].prompts if c.round == "independent"][0]
+    assert "（議長の事前調査（Web））" in indep.prompt and "claude のresearchでの発言" in indep.prompt
+
+
+async def test_research_off_by_default(cfg, new_session):
+    s = new_session(cfg)
+    d = await run_auto(s)
+    assert not [r for r in d.records() if r["round"] == "research"]
+
+
+async def test_research_failure_does_not_stop_topic(tmp_path, new_session):
+    cfg = make_config(tmp_path, {
+        "claude": {"adapter": "dummy", "role": "chair", "fail_rounds": ["research"]},
+        "gemini": {"adapter": "dummy", "role": "researcher"},
+    }, topics=["議題A"], intro=False, research="chair")
+    s = new_session(cfg)
+    d = await run_auto(s)
+    recs = d.records()
+    assert any(r.get("event") == "research_skipped" for r in recs)
+    assert "[D-001]" in (s.dir / "minutes.md").read_text()
+
+
+def test_shorten_redirect_links():
+    from dartmouth.engine.flow import shorten_redirect_links
+
+    t = "出典: [sbisec.co.jp](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQ_x-1) / [fsa.go.jp](https://www.fsa.go.jp/a)"
+    assert shorten_redirect_links(t) == "出典: sbisec.co.jp / [fsa.go.jp](https://www.fsa.go.jp/a)"

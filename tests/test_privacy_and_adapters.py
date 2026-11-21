@@ -243,3 +243,16 @@ def test_usage_breakdown_recorded():
                       "usage": {"input_tokens": 5, "cache_read_input_tokens": 1000, "output_tokens": 50}})
     r = a.parse(0, out, "", ctx())
     assert r.meta["turns"] == 7 and r.meta["usage"]["cache_read_input_tokens"] == 1000
+
+
+def test_research_round_gets_web_tools_only(tmp_path):
+    from dartmouth.adapters.base import TurnContext
+    from dartmouth.adapters.claude_code import ClaudeCodeAdapter
+
+    a = ClaudeCodeAdapter("c", "chair", 60, {"tools_rounds": [], "cwd": str(tmp_path)})
+    ctx = TurnContext("p", "c", "chair", "research", 1, "m", tmp_path, None)
+    argv, _ = a.build(ctx)
+    assert argv[argv.index("--tools") + 1] == "WebSearch,WebFetch"
+    assert a.workdir(ctx) != str(tmp_path)  # 事前調査ではコードの作業ディレクトリを渡さない
+    argv, _ = a.build(TurnContext("p", "c", "chair", "critique", 1, "m", tmp_path, None))
+    assert argv[argv.index("--tools") + 1] == ""

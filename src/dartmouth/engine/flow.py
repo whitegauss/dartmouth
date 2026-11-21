@@ -78,6 +78,15 @@ SEATING_SCHEMA: dict[str, Any] = {
 }
 
 
+_REDIRECT_LINK = re.compile(r"\[([^\]]+)\]\(https?://vertexaisearch\.cloud\.google\.com/grounding-api-redirect/[^)\s]+\)")
+
+
+def shorten_redirect_links(text: str) -> str:
+    """Gemini の検索の出典は、Google の転送 URL（数百字）で返る。中身の無い長い URL で調査メモの字数を使わないよう、
+    リンクの文字（ドメイン名）だけを残す。"""
+    return _REDIRECT_LINK.sub(lambda m: m.group(1), text)
+
+
 class MeetingAborted(Exception):
     pass
 
@@ -342,6 +351,7 @@ class Engine:
             "topics_total": len(self.topics),
             "critique_done": self.cur.critique_done if self.cur else 0,
             "critique_rounds": self.cfg.meeting.critique_rounds,
+            "research": self.cfg.meeting.research != "off",
             "inflight": {f.participant: {"elapsed_s": round(now - f.started, 1), "round": f.round} for f in self.inflight.values()},
             "calls_left": self.budget.calls_left,
             "rounds_left": self.budget.rounds_left,
@@ -452,7 +462,24 @@ class Engine:
             self._seat(self.cur, await self._plan_seating(self.cur))
         if self.kb is not None and self.cfg.knowledge:
             await self._add_materials(self.cur, f"{t.title}\n{t.premise}", self.cfg.knowledge.top_k, by=None)
+        if self.cfg.meeting.research == "chair" and t.extension_of is None:  # 延長は前回の調査メモを引き継ぐので調べ直さない
+            await self._research(self.cur)
         return Phase.INDEPENDENT
+
+    async def _research(self, cur: TopicState) -> None:
+        """議長が Web で調べ、出典つきの調査メモを議題の発言に加える（独立回答から全員に見える）。
+
+        失敗しても議題は止めない（調査メモなしで続ける）。
+        """
+        if cur.chair not in self.cfg.participants or cur.chair in self.absent:
+            return
+        self.bus.publish(E.ROUND_START, round="research", topic=cur.no, n=1)
+        tmpl = self.prompts.get("rounds/research")
+        reply = await self._call(cur.chair, "research", tmpl, extra={"research_max_chars": str(self.cfg.meeting.research_max_chars)},
+                                 filter_messages=lambda msgs: [m for m in msgs if m.speaker == "user"])
+        if reply is None:
+            self._system("議長の事前調査ができなかったため、調査メモなしで続けます", event="research_skipped", status="skipped")
+        self.bus.publish(E.ROUND_END, round="research", topic=cur.no)
 
     # ---- 席決め（議長が議題ごとに、ペルソナと経路を選ぶ）
 
@@ -717,7 +744,8 @@ class Engine:
         self.bus.publish(E.ROUND_START, round="independent", topic=cur.no, n=1)
         tmpl = self.prompts.get("rounds/independent")
         # 独立回答では他の参加者の回答を見せない（ユーザーの発言だけ渡す）
-        only_user = lambda msgs: [m for m in msgs if m.speaker == "user"]  # noqa: E731
+        # 議長の事前調査（research）は全員に同じものを渡す
+        only_user = lambda msgs: [m for m in msgs if m.speaker == "user" or m.round == "research"]  # noqa: E731
         await asyncio.gather(*(self._call(m, "independent", tmpl, filter_messages=only_user) for m in members))
         self.bus.publish(E.ROUND_END, round="independent", topic=cur.no)
         await self._maybe_wait_next()
@@ -1132,7 +1160,15 @@ class Engine:
                 elapsed = int((time.monotonic() - started) * 1000)
                 if reply is not None:
                     # 議長のまとめ（JSON・総括）は議論の発言ではないので文字数上限をかけない
-                    text, cut = (reply.text.strip(), False) if round_ == "summary" else self.budget.truncate(reply.text.strip())
+                    if round_ == "summary":
+                        text, cut = reply.text.strip(), False
+                    elif round_ == "research":
+                        # 調査メモは発言の上限ではなく、調査メモ用の上限で切る
+                        raw = shorten_redirect_links(reply.text.strip())
+                        lim = self.cfg.meeting.research_max_chars
+                        text, cut = (raw[:lim], True) if len(raw) > lim else (raw, False)
+                    else:
+                        text, cut = self.budget.truncate(reply.text.strip())
                     format_violation = None
                     context_text = text
                     persona_meta, _ = self.persona_lib.get(name, ({}, ""))
@@ -1175,6 +1211,8 @@ class Engine:
             if failover_retry:
                 continue
             # 再試行しても失敗
+            if round_ == "research":
+                return None  # 事前調査は無くても議題を続けられるので、会議を止めて聞かない
             if self._failure_policy(name, cur) == "skip":
                 self._record(round_, name, "system", f"{self.names[name]} はこのラウンドを欠席扱いにします", status="skipped")
                 return None
