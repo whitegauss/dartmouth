@@ -267,7 +267,8 @@ function lgRenderTable(items) {
     tr.querySelector(".st").onclick = (e) => e.stopPropagation();
     tr.querySelector(".lg-id").onclick = (e) => e.stopPropagation();
     tr.querySelector(".st").onchange = async (e) => {
-      const note = e.target.value === "open" ? "" : (prompt("メモ（任意）", it.status_note || "") ?? "");
+      // 状態はそのまま切り替える（メモは聞かない。前のメモは残す。未完了に戻したら消す）
+      const note = e.target.value === "open" ? "" : (it.status_note || "");
       try { await api(`/api/ledger/item/${encodeURIComponent(it.uid)}/status`, {method: "POST", body: JSON.stringify({status: e.target.value, note})}); lgLoadItems(); }
       catch (err) { toast(err.message, "error"); }
     };

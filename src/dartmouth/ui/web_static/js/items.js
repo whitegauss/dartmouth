@@ -28,8 +28,7 @@ function renderItems() {
       <td><label style="margin:0;display:flex;gap:4px;align-items:center;color:var(--fg)"><input type="checkbox" class="done" ${i.done ? "checked" : ""}>${doneLabel}</label></td>`;
     tr.querySelector(".sel").onchange = (e) => { e.target.checked ? selected.add(key) : selected.delete(key); updateSel(); };
     tr.querySelector(".done").onchange = async (e) => {
-      let note = i.note || "";
-      if (e.target.checked) { const n = prompt(`${doneLabel}にします。メモ（任意）`, note); if (n === null) { e.target.checked = false; return; } note = n; }
+      const note = i.note || "";
       try { await api("/api/items/status", {method: "POST", body: JSON.stringify({meeting: i.meeting, id: i.id, done: e.target.checked, note})}); i.done = e.target.checked; i.note = note; renderItems(); }
       catch (err) { toast(err.message, "error"); e.target.checked = !e.target.checked; }
     };
