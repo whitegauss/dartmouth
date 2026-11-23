@@ -112,3 +112,21 @@ def test_fallback_cuts_at_configured_limit():
     assert bad and out.endswith(FALLBACK) and len(out) == 800 + 1 + len(FALLBACK)
     out, bad = validate_output(long, max_chars=400)
     assert len(out) == 400 + 1 + len(FALLBACK)
+
+
+def test_main_conditions_and_topic_count(tmp_path):
+    import yaml
+    from experiments.runner import main_plan
+
+    data = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    data["topics"] = {f"q{i}": {"prompt": f"問{i}"} for i in range(10)}
+    data["pilot_topic"] = "q0"
+    data["main_conditions"] = ["C", "B"]
+    settings = Experiment.model_validate(data)
+    plan = main_plan(settings.topics, settings.main_conditions, settings.seed)
+    assert len(plan) == 20 and {c for _, c in plan} == {"B", "C"}
+    assert plan == main_plan(settings.topics, settings.main_conditions, settings.seed)  # 順序は固定
+    # 既定は本実験と同じ（3議題×4条件の順序が変わらない）
+    assert main_plan(["1", "2", "3"]) == main_plan(["1", "2", "3"], ("A", "B", "C", "D"), 20261119)
+    with pytest.raises(Exception):
+        Experiment.model_validate(data | {"main_conditions": ["E"]})

@@ -84,11 +84,18 @@ class Experiment(Settings):
     max_chars: int = Field(default=400, gt=0)
     forbidden_words: tuple[str, ...] = ()
     timeout_s: float = Field(default=300, gt=0, allow_inf_nan=False)
+    # 本実行で回す条件と、実行順を決める乱数シード（既定は本実験 2026-11-21 と同じ）。
+    # 正解つきの小問を多数回すベンチマークでは、条件を絞り（例: [B, C]）、議題を増やす
+    main_conditions: tuple[str, ...] = ("A", "B", "C", "D")
+    seed: int = 20261119
 
     @model_validator(mode="after")
     def check_design(self) -> Experiment:
-        if len(self.topics) != 3 or any(not re.fullmatch(ID_PATTERN, topic) for topic in self.topics):
-            raise ValueError("議題IDを3件指定してください")
+        if not self.topics or any(not re.fullmatch(ID_PATTERN, topic) for topic in self.topics):
+            raise ValueError("議題IDを1件以上指定してください")
+        if not self.main_conditions or len(set(self.main_conditions)) != len(self.main_conditions) \
+                or not set(self.main_conditions) <= ADAPTERS.keys():
+            raise ValueError("本実行の条件は A〜D から重複なく指定してください")
         if set(self.conditions) != ADAPTERS.keys():
             raise ValueError("条件 A〜D を指定してください")
         if (
@@ -313,11 +320,11 @@ class DryAdapter:
         pass
 
 
-def main_plan(topics):
+def main_plan(topics, conditions=tuple(ADAPTERS), seed=20261119):
     import random
 
-    plan = [(topic, condition) for topic in sorted(topics) for condition in sorted(ADAPTERS)]
-    random.Random(20261119).shuffle(plan)
+    plan = [(topic, condition) for topic in sorted(topics) for condition in sorted(conditions)]
+    random.Random(seed).shuffle(plan)
     return plan
 
 
@@ -377,7 +384,7 @@ def execute(settings, args, parser):
                 writer.writeheader()
             phase = "pilot" if args.pilot else "main"
             roles = args.roles or "roles_standard"
-            plan = [(settings.pilot_topic, condition) for condition in settings.pilot_conditions] if args.pilot else main_plan(settings.topics)
+            plan = [(settings.pilot_topic, condition) for condition in settings.pilot_conditions] if args.pilot else main_plan(settings.topics, settings.main_conditions, settings.seed)
             jobs = [(order, topic, condition, phase, roles, "") for order, (topic, condition) in enumerate(plan, 1)]
             if args.retry_session:
                 original = next((row for row in rows if row["session_id"] == args.retry_session), None)

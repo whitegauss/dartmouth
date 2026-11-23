@@ -27,5 +27,6 @@ exports/
 
 # 比較実験の個人設定と台帳ロック
 /configs/experiment.yaml
+/configs/benchmark*.yaml
 /REPORT-phase1.md
 *.csv.lock
